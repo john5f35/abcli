@@ -1,3 +1,10 @@
+# Personal data
+csv/
+rulebooks/
+beans/
+*.csv
+*.yaml
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -102,3 +109,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# IDEs
+.vscode/
