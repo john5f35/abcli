@@ -7,6 +7,8 @@ from pprint import PrettyPrinter
 
 import click
 
+from accbook.common import load_csv, this_str2dict
+
 pformat = PrettyPrinter().pformat
 
 def process(txns: [dict], rulebook: dict, force=False) -> ([dict], int):
@@ -41,27 +43,9 @@ def process(txns: [dict], rulebook: dict, force=False) -> ([dict], int):
     return restxns, num_classified
 
 def _check_custom(txn: dict) -> bool:
-    def __is_valid_dictstr(dictstr: str):
-        try:
-            d = eval(dictstr)
-            assert isinstance(d, dict)
-            return True
-        except Exception:
-            return False
-
-    def __get_account_dict(this_or_that: str) -> dict:
-        field = txn[this_or_that]
-        amount = float(txn['amount'])
-        if field == '':
-            field = this_or_that
-        if not '{' in field:
-            return {field: amount if this_or_that == 'this' else -amount}
-        if __is_valid_dictstr(field):
-            return eval(field)
-        return None
-
-    this_dict = __get_account_dict('this')
-    that_dict = __get_account_dict('that')
+    amount = float(txn['amount'])
+    this_dict = this_str2dict(txn['this'], amount)
+    that_dict = this_str2dict(txn['that'], -amount)
 
     if this_dict is None or that_dict is None:
         return False
@@ -86,8 +70,6 @@ def preprocess(txns: [dict]) -> [dict]:
     return list(sorted(processed, key=parse_date, reverse=True))
 
 
-FIELDS = ['date', 'amount', 'desc', 'balance', 'this', 'that', 'ref', 'tags']
-
 @click.command()
 @click.option("-r", "--rulebook", required=True, type=click.Path(dir_okay=False),
                 callback=lambda c, p, v: Path(v),
@@ -99,12 +81,7 @@ def main(csvpath: Path, rulebook: Path, force):
     with rulebook.open('r', encoding='utf-8') as fp:
         rulebook = yaml.full_load(fp)
 
-    lines = csvpath.read_text('UTF-8').strip().split('\n')
-    txns = list(csv.DictReader(lines, FIELDS, restval=''))
-    if txns[0]['date'] == 'date':
-        # Skip header if file contains header
-        txns = txns[1:]
-
+    txns = load_csv(csvpath)
     txns = preprocess(txns)
 
     restxns, num_classified = process(txns, rulebook, force)
