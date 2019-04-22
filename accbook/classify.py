@@ -3,9 +3,11 @@ import json, yaml
 import csv
 import re
 import datetime
+from pprint import PrettyPrinter
 
 import click
 
+pformat = PrettyPrinter().pformat
 
 def process(txns: [dict], rulebook: dict, force=False) -> ([dict], int):
     restxns = []
@@ -38,6 +40,32 @@ def process(txns: [dict], rulebook: dict, force=False) -> ([dict], int):
 
     return restxns, num_classified
 
+def _check_custom(txn: dict) -> bool:
+    def __is_valid_dictstr(dictstr: str):
+        try:
+            d = eval(dictstr)
+            assert isinstance(d, dict)
+            return True
+        except Exception:
+            return False
+
+    def __get_account_dict(this_or_that: str) -> dict:
+        field = txn[this_or_that]
+        amount = float(txn['amount'])
+        if field == '':
+            field = this_or_that
+        if not '{' in field:
+            return {field: amount if this_or_that == 'this' else -amount}
+        if __is_valid_dictstr(field):
+            return eval(field)
+        return None
+
+    this_dict = __get_account_dict('this')
+    that_dict = __get_account_dict('that')
+
+    if this_dict is None or that_dict is None:
+        return False
+    return abs(sum(this_dict.values()) + sum(that_dict.values())) < 1e-6
 
 def preprocess(txns: [dict]) -> [dict]:
     def _fix_date(txn: dict) -> dict:
@@ -47,23 +75,11 @@ def preprocess(txns: [dict]) -> [dict]:
             txn['desc'] = note[:note.index(" Value Date:")]
         return txn
 
-    def _check_custom(txn: dict) -> dict:
-        def __is_valid(dictstr: str):
-            if dictstr != '' and '{' in dictstr:
-                try:
-                    d = eval(dictstr)
-                    assert isinstance(d, dict)
-                except Exception:
-                    return False
-            return True
-
-        return __is_valid(txn['this']) and __is_valid(txn['that'])
-
     processed = []
     for idx, txn in enumerate(txns):
         txn = _fix_date(txn)
         if not _check_custom(txn):
-            raise SyntaxError(f"invalid syntax in this or that field of transaction at line {idx}: {txn}")
+            raise ValueError(f"Validation failed in this or that field of transaction at line {idx + 2}: \n{pformat(txn)}")
 
         processed.append(txn)
     parse_date = lambda txn: datetime.datetime.strptime(txn['date'], '%d/%m/%Y')
