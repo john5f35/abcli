@@ -74,7 +74,7 @@ def recs2txns(csvrecs: [dict], this: str) -> [dict]:
     txns = []
     for ref, recs in group_dict.items():
         if ref == '':
-            txns.extend([_group2txn([rec]) for rec in group_dict['']])
+            txns.extend([_group2txn([rec])[0] for rec in group_dict['']])
         else:
             txns.extend(_group2txn(recs))
 
