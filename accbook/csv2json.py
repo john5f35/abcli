@@ -14,53 +14,72 @@ from accbook.common import load_csv, this_str2dict
 
 pformat = PrettyPrinter().pformat
 
+def groupby(iterable, key) -> dict:
+    group = defaultdict(list)
+    for obj in iterable:
+        group[key(obj)].append(obj)
+    return group
 
-def _group_by_ref(recs: [dict]) -> dict:
-    refgroup = defaultdict(list)
 
-    for rec in recs:
-        refgroup[rec['ref']].append(rec)
+def _rec2txn(rec: dict, this: str) -> dict:
+    amount = float(rec['amount'])
+    this_dict = this_str2dict(rec['this'], amount)
+    that_dict = this_str2dict(rec['that'], -amount)
 
-    return refgroup
+    def _to_posts(this_dict: dict):
+        posts = []
+        for account, amount in this_dict.items():
+            if account == '__this__':
+                d = {'account': this, 'amount': amount, 'desc': rec['desc']}
+            else:
+                d = {'account': account, 'amount': amount}
+            posts.append(d)
+        return posts
+
+    return {
+        'id': str(uuid.uuid4()),
+        'date': rec['date'],
+        'ref': rec['ref'][1:],
+        # 'tags': rec['tags'],
+        'posts': _to_posts(this_dict) + _to_posts(that_dict)
+    }
 
 def recs2txns(csvrecs: [dict], this: str) -> [dict]:
-    def _convert_this_dict(this_dict: dict, rec: dict) -> [dict]:
-        return [{
-                "account": account,
-                "amount": amount,
-                "desc": rec['desc'],
-                'date': rec['date']
-            } for account, amount in this_dict.items()]
+    def _merge_same_date(txns: [dict]) -> dict:
+        if len(txns) == 1:
+            return txns
 
-    def _group2txn(recs: [dict]) -> dict:
         posts = []
-        for rec in recs:
-            amount = float(rec['amount'])
-            this_dict = this_str2dict(rec['this'], amount)
-            if '__this__' in this_dict:
-                this_dict[this] = this_dict['__this__']
-                del this_dict['__this__']
-            that_dict = this_str2dict(rec['that'], -amount)
-
-            posts.extend(_convert_this_dict(this_dict, rec))
-            posts.extend(_convert_this_dict(that_dict, rec))
+        for txn in txns:
+            posts.extend(txn['posts'])
 
         return {
             'id': str(uuid.uuid4()),
+            'date': txns[0]['date'],
+            'ref': txns[0]['ref'],
             'posts': posts
         }
 
+    def _group2txn(recs: [dict]) -> [dict]:
+        _txns = list(map(lambda rec: _rec2txn(rec, this), recs))
+        if len(_txns) == 1:
+            return _txns
+
+        date_groups = groupby(_txns, lambda txn: txn['date'])
+        return list(map(_merge_same_date, date_groups.values()))
+
+
+    group_dict = groupby(csvrecs, lambda rec: rec['ref'])
+
     txns = []
-
-    group_dict = _group_by_ref(csvrecs)
-
     for ref, recs in group_dict.items():
         if ref == '':
             txns.extend([_group2txn([rec]) for rec in group_dict['']])
         else:
-            txns.append(_group2txn(recs))
+            txns.extend(_group2txn(recs))
 
     return txns
+
 
 def process(csvrecs: [dict], this: str) -> [dict]:
     return recs2txns(csvrecs, this)
