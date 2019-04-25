@@ -6,7 +6,7 @@ import datetime
 from pprint import PrettyPrinter
 import json
 from collections import defaultdict
-import uuid
+from hashlib import sha1
 
 import click
 
@@ -22,47 +22,62 @@ def groupby(iterable, key) -> dict:
 
 
 def _rec2txn(rec: dict, this: str) -> dict:
-    amount = float(rec['amount'])
-    this_dict = this_str2dict(rec['this'], amount)
-    that_dict = this_str2dict(rec['that'], -amount)
-
     def _to_posts(this_dict: dict):
         posts = []
         for account, amount in this_dict.items():
             if account == '__this__':
-                d = {'account': this, 'amount': amount, 'desc': rec['desc']}
+                d = {'account': this, 'desc': rec['desc']}
             else:
-                d = {'account': account, 'amount': amount}
+                d = {'account': account}
+            d['amount'] = amount
             posts.append(d)
         return posts
 
+    if rec['that'] == '':
+        raise ValueError(f"Failed to convert to JSON: unclassified transaction\n {rec}")
+
+    amount = float(rec['amount'])
+    this_dict = this_str2dict(rec['this'], amount)
+    that_dict = this_str2dict(rec['that'], -amount)
+
     return {
-        'id': str(uuid.uuid4()),
         'date': rec['date'],
         'ref': rec['ref'][1:],
         # 'tags': rec['tags'],
+        'balance': rec['balance'],      # Keep the balance at this stage
         'posts': _to_posts(this_dict) + _to_posts(that_dict)
     }
 
 def recs2txns(csvrecs: [dict], this: str) -> [dict]:
+    def _get_uid(txn: dict) -> str:
+        if txn['ref'] != '':
+            key = f"{txn['date']} {txn['ref']}"
+        else:
+            key = f"{txn['date']} {txn['balance']}"
+
+        return sha1(key.encode()).hexdigest()
+
     def _merge_same_date(txns: [dict]) -> dict:
         if len(txns) == 1:
+            txns[0]['id'] = _get_uid(txns[0])
             return txns
 
         posts = []
         for txn in txns:
             posts.extend(txn['posts'])
 
-        return {
-            'id': str(uuid.uuid4()),
+        res = {
             'date': txns[0]['date'],
             'ref': txns[0]['ref'],
             'posts': posts
         }
+        res['id'] = _get_uid(res)
+        return res
 
     def _group2txn(recs: [dict]) -> [dict]:
         _txns = list(map(lambda rec: _rec2txn(rec, this), recs))
         if len(_txns) == 1:
+            _txns[0]['id'] = _get_uid(_txns[0])
             return _txns
 
         date_groups = groupby(_txns, lambda txn: txn['date'])
