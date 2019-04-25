@@ -7,7 +7,7 @@ from pprint import PrettyPrinter
 
 import click
 
-from accbook.common import load_csv, this_str2dict
+from accbook.common import load_csv, this_str2dict, FIELDS
 
 pformat = PrettyPrinter().pformat
 
