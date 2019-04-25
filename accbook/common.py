@@ -1,6 +1,12 @@
 import csv
 from pathlib import Path
 
+JSON_FORMAT_DATE = '%m/%d/%Y'
+JSON_FORMAT = {
+    'indent': 2,
+    'separators': (',', ': ')
+}
+
 FIELDS = ['date', 'amount', 'desc', 'balance', 'this', 'that', 'ref', 'tags']
 
 def load_csv(csvpath: Path) -> [dict]:
