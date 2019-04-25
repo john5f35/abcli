@@ -1,12 +1,12 @@
 # CLI
 #
 # Commands:
-#   - import transactions <json>
-#   - import budget <json>
-#   - show transaction (?)
-#   - show account [name] [date-from] [date-to] [aggregation:week|fortnight|*month*|quarter|year]
+#   - transactions import <json>
+#   - transaction show (?)
+#   - account show [name] [date-from] [date-to] [aggregation:week|fortnight|*month*|quarter|year]
 #       Shows balance, average in aggregation method, between two dates
-#   - graph account [name] [date-from] [date-to] [aggregation:...]
-#   - show budget [name] [account]
+#   - account graph [name] [date-from] [date-to] [aggregation:...]
+#   - budget import <json>
+#   - budget show [name] [account]
 #       Shows progress & summary of a named budget
-#   - show projection [name] [unit] [aggregation:...]
+#   - budget project [name] [unit] [aggregation:...]
