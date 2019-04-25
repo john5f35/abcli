@@ -44,7 +44,7 @@ def _rec2txn(rec: dict, this: str) -> dict:
         'date': rec['date'],
         'ref': rec['ref'][1:],
         # 'tags': rec['tags'],
-        'balance': rec['balance'],      # Keep the balance at this stage
+        'balance': float(rec['balance']),      # Keep the balance at this stage
         'posts': _to_posts(this_dict) + _to_posts(that_dict)
     }
 
@@ -96,8 +96,16 @@ def recs2txns(csvrecs: [dict], this: str) -> [dict]:
     return txns
 
 
-def process(csvrecs: [dict], this: str) -> [dict]:
-    return recs2txns(csvrecs, this)
+def process(csvrecs: [dict], this: str) -> dict:
+    txns = recs2txns(csvrecs, this)
+    return {
+        'account': this,
+        'balance': {
+            'date': csvrecs[0]['date'],
+            'balance': float(csvrecs[0]['balance'])
+        },
+        'transactions': txns
+    }
 
 
 @click.command()
@@ -110,7 +118,7 @@ def main(csvpath: Path, output: Path, this: str):
     txns = load_csv(csvpath)
     res = process(txns, this)
     with output.open('w', encoding='utf-8') as fp:
-        json.dump(res, fp, separators=(',', ':'), indent=2)
+        json.dump(res, fp, separators=(',', ': '), indent=2)
 
 
 if __name__ == '__main__':
