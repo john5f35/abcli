@@ -78,6 +78,7 @@ def recs2txns(csvrecs: [dict], this: str) -> [dict]:
         _txns = list(map(lambda rec: _rec2txn(rec, this), recs))
         if len(_txns) == 1:
             _txns[0]['id'] = _get_uid(_txns[0])
+            del _txns[0]['balance']
             return _txns
 
         date_groups = groupby(_txns, lambda txn: txn['date'])
