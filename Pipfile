@@ -10,6 +10,7 @@ pylint = "*"
 click = "*"
 pytest = "*"
 pyyaml = "*"
+pony = "*"
 
 [requires]
 python_version = "3.7"

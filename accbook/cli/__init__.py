@@ -10,3 +10,7 @@
 #   - budget show [name] [account]
 #       Shows progress & summary of a named budget
 #   - budget project [name] [unit] [aggregation:...]
+
+from pony.orm import Database
+
+db = Database()
