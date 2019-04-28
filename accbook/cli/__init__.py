@@ -11,6 +11,10 @@
 #       Shows progress & summary of a named budget
 #   - budget project [name] [unit] [aggregation:...]
 
+import logging
+logging.getLogger().setLevel("DEBUG")
+logging.basicConfig(format="[%(levelname)s] %(message)s")
+
 from pony.orm import Database
 
 db = Database()

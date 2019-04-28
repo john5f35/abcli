@@ -5,39 +5,34 @@ import json
 
 import click
 
+from accbook.cli import db
+from accbook.cli.model import *
+from accbook.cli.commands import init_command_groups
 
-root_logger = logging.getLogger()
 
 def set_root_logger_level(cli_level):
-    default_level = "WARNING"
+    root_logger = logging.getLogger()
     env_level = os.environ.get("LOG_LEVEL", "NOTSET")
-    root_logger.setLevel(default_level)
     root_logger.setLevel(env_level)
-    root_logger.setLevel(cli_level)
+    if cli_level:
+        root_logger.setLevel(cli_level)
 
-    logging.basicConfig(format="[%(level)s] %(message)s")
+    if root_logger.getEffectiveLevel() == logging.DEBUG:
+        set_sql_debug(True)
 
 
 @click.group()
-@click.option("--log-level", type=click.Choice([logging._nameToLevel.keys()]),
+@click.option("--log-level", type=click.Choice([str(k) for k in logging._nameToLevel.keys()]), default=None,
         help="Set the root logger level")
-@click.argument("db", type=click.Path(),
-        help="Database. Currently a JSON file.")
+@click.argument("db_path", type=click.Path())
 @click.pass_context
-def entry_point(ctx, log_level, db):
+def cli(ctx, log_level, db_path):
     set_root_logger_level(log_level)
 
-    db_path = Path(db)
-    root_logger.info("loading db...")
-    try:
-        with db_path.open("r") as fp:
-            db_json = json.load(fp)
-    except FileNotFoundError:
-        root_logger.warning(f"Database file {db_path} not found; creating a new one.")
-        db_path.touch()
-        db_json = {}
-    except json.JSONDecodeError:
-        root_logger.error(f"Failed to load JSON db at {db_path}: invalid JSON.")
-        ctx.exit(1)
+    db.bind(provider='sqlite', filename=db_path, create_db=True)
+    db.generate_mapping(create_tables=True)
 
-    ctx.obj = db_json
+init_command_groups(cli)
+
+if __name__ == '__main__':
+    globals()['cli']()
