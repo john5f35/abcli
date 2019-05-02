@@ -2,6 +2,7 @@ import json
 
 from accbook.cli import db
 from accbook.cli.model import *
+from accbook.common import format_date
 
 from pony.orm import *
 
@@ -30,3 +31,6 @@ def test_todictrepr():
 
         assert isinstance(txn_dic['posts'], dict)
         assert txn_dic['posts'][1] == posts[0].to_dictrepr()
+
+        assert isinstance(txn_dic['date'], str)
+        assert txn_dic['date'] == format_date(Date.today())

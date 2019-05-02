@@ -60,7 +60,7 @@ def recs2txns(csvrecs: [dict], this: str) -> [dict]:
     def _merge_same_date(txns: [dict]) -> dict:
         if len(txns) == 1:
             txns[0]['id'] = _get_uid(txns[0])
-            return txns
+            return txns[0]
 
         posts = []
         for txn in txns:

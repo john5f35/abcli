@@ -2,6 +2,7 @@ from datetime import date as Date, timedelta as TimeDelta, datetime as DateTime
 from decimal import Decimal
 import json
 
+from accbook.common import format_date
 from accbook.cli import db
 
 from pony.orm import *
@@ -21,6 +22,8 @@ class DictConversionMixin:
                     if obj not in visited:
                         res[obj.get_pk()] = obj.to_dictrepr(visited)
                 dic[attr.name] = res
+            if isinstance(dic[attr.name], Date):
+                dic[attr.name] = format_date(dic[attr.name])
         return dic
 
 
@@ -62,3 +65,7 @@ class BudgetItem(db.Entity, DictConversionMixin):
     account = Required(Account)
     amount = Required(Decimal, precision=16, scale=2)
     budget = Optional(Budget)
+
+
+def is_balance_account(account_name: str) -> bool:
+    return account_name.startswith("Asset") or account_name.startswith("Liability")

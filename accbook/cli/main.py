@@ -29,7 +29,7 @@ def set_root_logger_level(cli_level):
 def cli(ctx, log_level, db_path):
     set_root_logger_level(log_level)
 
-    db.bind(provider='sqlite', filename=db_path, create_db=True)
+    db.bind(provider='sqlite', filename=os.path.abspath(db_path), create_db=True)
     db.generate_mapping(create_tables=True)
 
 init_command_groups(cli)
