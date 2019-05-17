@@ -3,10 +3,8 @@ from decimal import Decimal
 import json
 
 from accbook.common import format_date
-from accbook.cli import db
 
-from pony.orm import *
-
+from pony import orm
 
 class DictConversionMixin:
     def to_dictrepr(self, visited=set()):
@@ -15,7 +13,7 @@ class DictConversionMixin:
         attrs = self.__class__._get_attrs_(with_collections=True)
         dic = self.to_dict(with_collections=True, related_objects=True)
         for attr in attrs:
-            if isinstance(attr, Set):
+            if isinstance(attr, orm.Set):
                 attr_set = dic[attr.name]
                 res = {}
                 for obj in attr_set:
@@ -26,45 +24,47 @@ class DictConversionMixin:
                 dic[attr.name] = format_date(dic[attr.name])
         return dic
 
+def init_orm(db: orm.Database):
 
-class Account(db.Entity, DictConversionMixin):
-    name = PrimaryKey(str)
-    posts = Set(lambda: Post)
-    budget_items = Set(lambda: BudgetItem)
+    class Account(db.Entity, DictConversionMixin):
+        # __slot__ = ('name', 'balance', 'posts', 'budget_items')
+        name = orm.PrimaryKey(str)
+        balance = orm.Optional(lambda: Balance, cascade_delete=True)
+        posts = orm.Set(lambda: Post, cascade_delete=True)
+        budget_items = orm.Set(lambda: BudgetItem, cascade_delete=True)
 
+    class Balance(db.Entity, DictConversionMixin):
+        account = orm.Required(Account)
+        balance = orm.Required(Decimal, precision=16, scale=2)
+        date = orm.Required(Date)
 
-class BalanceAccount(Account):
-    date = Required(Date)
-    balance = Required(Decimal, precision=16, scale=2)
+    class Post(db.Entity, DictConversionMixin):
+        account = orm.Required(Account)
+        amount = orm.Required(Decimal, precision=16, scale=2)
+        description = orm.Optional(str)
+        transaction = orm.Optional(lambda: Transaction)
 
+    class Transaction(db.Entity, DictConversionMixin):
+        uid = orm.PrimaryKey(str)
+        date = orm.Required(Date)
+        posts = orm.Set(Post)
+        periodical = orm.Optional(lambda: Periodical)
 
-class Post(db.Entity, DictConversionMixin):
-    account = Required(Account)
-    amount = Required(Decimal, precision=16, scale=2)
-    description = Optional(str)
-    transaction = Optional(lambda: Transaction)
+    class Periodical(db.Entity, DictConversionMixin):
+        period = orm.Required(TimeDelta)
+        transactions = orm.Set(Transaction)
 
+    class Budget(db.Entity, DictConversionMixin):
+        date_from = orm.Required(Date)
+        date_to = orm.Required(Date)
+        items = orm.Set(lambda: BudgetItem)
 
-class Transaction(db.Entity, DictConversionMixin):
-    uid = PrimaryKey(str)
-    date = Required(Date)
-    posts = Set(Post)
+    class BudgetItem(db.Entity, DictConversionMixin):
+        account = orm.Required(Account)
+        amount = orm.Required(Decimal, precision=16, scale=2)
+        budget = orm.Optional(Budget)
 
-
-class PeriodicTransaction(Transaction):
-    date_from = Required(Date)
-    period = Required(TimeDelta)
-
-
-class Budget(db.Entity, DictConversionMixin):
-    date_from = Required(Date)
-    date_to = Required(Date)
-    items = Set(lambda: BudgetItem)
-
-class BudgetItem(db.Entity, DictConversionMixin):
-    account = Required(Account)
-    amount = Required(Decimal, precision=16, scale=2)
-    budget = Optional(Budget)
+    db.generate_mapping(create_tables=True)
 
 
 def is_balance_account(account_name: str) -> bool:

@@ -12,9 +12,6 @@
 #   - budget project [name] [unit] [aggregation:...]
 
 import logging
-logging.getLogger().setLevel("DEBUG")
-logging.basicConfig(format="[%(levelname)s] %(message)s")
-
-from pony.orm import Database
-
-db = Database()
+# logging.basicConfig(format="[%(levelname)s] %(message)s")
+import coloredlogs
+coloredlogs.install(fmt="[%(levelname)s] %(message)s", logger=logging.getLogger())
