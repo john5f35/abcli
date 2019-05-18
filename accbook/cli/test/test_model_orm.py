@@ -1,36 +1,26 @@
-import json
+from pony import orm
 
-from accbook.cli import db
-from accbook.cli.model import *
-from accbook.common import format_date
+from accbook.cli.model import init_orm
+from accbook.common import format_date, Date
 
-from pony.orm import *
-
-from pprint import PrettyPrinter
-pprint = PrettyPrinter().pprint
 
 def test_todictrepr():
-    set_sql_debug(True)
-    db.bind('sqlite', ':memory:', create_db=True)
-    db.generate_mapping(create_tables=True)
+    orm.set_sql_debug(True)
+    db = orm.Database(provider='sqlite', filename=':memory:', create_db=True)
+    init_orm(db)
 
-    with db.set_perms_for(Account, BalanceAccount, Post, Transaction):
-        perm('view', group='anybody')
+    with db.set_perms_for(db.Account, db.Post, db.Transaction):
+        orm.perm('view', group='anybody')
 
-    with db_session:
-        a = Account(name="TestAccount")
-        b = BalanceAccount(name="TestBalanceAccount", date=Date.today(), balance=0.0)
-        # commit()
-        posts=[
-            Post(account=a, amount=123.45),
-            Post(account=b, amount=-123.45)
-        ]
-        txn = Transaction(uid="123", date=Date.today(), posts=posts)
+    with orm.db_session:
+        account = db.Account(name="TestAccount")
 
-        txn_dic = txn.to_dictrepr()
-
-        assert isinstance(txn_dic['posts'], dict)
-        assert txn_dic['posts'][1] == posts[0].to_dictrepr()
-
-        assert isinstance(txn_dic['date'], str)
-        assert txn_dic['date'] == format_date(Date.today())
+        assert account.to_dictrepr() == {
+            'name': 'TestAccount'
+        }
+        assert account.to_dictrepr(simple=False) == {
+            'name': 'TestAccount',
+            'balance': None,
+            'budget_items': {},
+            'posts': {}
+        }
