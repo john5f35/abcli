@@ -19,7 +19,7 @@ def setup_db(tmp_path: Path):
 def test_add_account(tmp_path):
     db, db_file = setup_db(tmp_path)
 
-    res = CliRunner().invoke(cli, [str(db_file), 'accounts', 'add', 'TestAccount'])
+    res = CliRunner().invoke(cli, [str(db_file), 'account', 'add', 'TestAccount'])
     assert res.exit_code == 0, str(res)
 
     with db_session:
