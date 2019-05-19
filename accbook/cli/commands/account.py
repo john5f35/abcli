@@ -3,7 +3,7 @@ import datetime
 
 import click
 from pony import orm
-from accbook.common import parse_date, JSON_FORMAT_DATE
+from accbook.common import parse_date, JSON_FORMAT_DATE, error_exit_on_exception
 
 logger = logging.getLogger()
 
@@ -14,24 +14,27 @@ def cli():
 @cli.command('add')
 @click.argument('name')
 @click.pass_obj
-@orm.db_session
+@error_exit_on_exception
 def cmd_add(db, name: str):
-    try:
-        db.Account(name=name)
-        click.echo(f"Account '{name}' added.")
-        return 0
-    except orm.ConstraintError:
-        raise click.BadArgumentUsage(f"Account '{name}' already exists.")
+    with orm.db_session:
+        try:
+            db.Account(name=name)
+            orm.commit()
+            logger.info(f"Account '{name}' added.")
+            return 0
+        except orm.TransactionIntegrityError:
+            raise click.BadArgumentUsage(f"Account '{name}' already exists.")
 
 
 @cli.command('delete')
 @click.argument('name')
 @click.pass_obj
 @orm.db_session
+@error_exit_on_exception
 def cmd_delete(db, name: str):
     try:
         db.Account[name].delete()
-        click.echo(f"Account '{name}' deleted.")
+        logger.info(f"Account '{name}' deleted.")
         return 0
     except orm.ObjectNotFound:
         raise click.BadArgumentUsage(f"Account '{name}' does not exist.")
@@ -41,10 +44,11 @@ def cmd_delete(db, name: str):
 @click.argument('name')
 @click.pass_obj
 @orm.db_session
+@error_exit_on_exception
 def cmd_show(db, name: str):
     try:
         account = db.Account[name]
-        click.echo(f"Account '{name}'")
+        logger.info(f"Account '{name}'")
         return 0
     except orm.ObjectNotFound:
         raise click.BadArgumentUsage(f"Account '{name}' does not exist.")

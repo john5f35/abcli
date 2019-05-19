@@ -7,21 +7,27 @@ from accbook.common import format_date
 from pony import orm
 
 class DictConversionMixin:
-    def to_dictrepr(self, visited=set()):
+    def to_dictrepr(self, simple=True, visited=set()):
         visited.add(self)
 
         attrs = self.__class__._get_attrs_(with_collections=True)
         dic = self.to_dict(with_collections=True, related_objects=True)
         for attr in attrs:
-            if isinstance(attr, orm.Set):
-                attr_set = dic[attr.name]
+            val = dic[attr.name]
+            if val is None and simple:
+                del dic[attr.name]
+            elif isinstance(attr, orm.Set):
                 res = {}
-                for obj in attr_set:
+                for obj in val:
                     if obj not in visited:
                         res[obj.get_pk()] = obj.to_dictrepr(visited)
-                dic[attr.name] = res
-            if isinstance(dic[attr.name], Date):
-                dic[attr.name] = format_date(dic[attr.name])
+                if len(res) == 0 and simple:
+                    del dic[attr.name]
+                    continue
+                else:
+                    dic[attr.name] = res
+            elif isinstance(dic[attr.name], Date):
+                dic[attr.name] = format_date(val)
         return dic
 
 def init_orm(db: orm.Database):

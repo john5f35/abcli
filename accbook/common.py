@@ -1,7 +1,10 @@
 import csv
 from pathlib import Path
 import datetime
+import logging
 from datetime import date as Date
+
+import click
 
 JSON_FORMAT_DATE = '%d/%m/%Y'
 JSON_FORMAT = {
@@ -41,3 +44,14 @@ def _is_valid_dictstr(dictstr: str):
         return True
     except Exception:
         return False
+
+def error_exit_on_exception(fnc):
+    def _wrapped(*args, **kwargs):
+        try:
+            return fnc(*args, **kwargs)
+        except Exception as e:
+            msg = e.message if getattr(e, 'message', None) else str(e)
+            logging.getLogger().error(msg)
+            click.get_current_context().exit(1)
+    return _wrapped
+

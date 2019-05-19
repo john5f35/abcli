@@ -14,4 +14,5 @@
 import logging
 # logging.basicConfig(format="[%(levelname)s] %(message)s")
 import coloredlogs
-coloredlogs.install(fmt="[%(levelname)s] %(message)s", logger=logging.getLogger())
+# TODO: maybe load format from a config file?
+coloredlogs.install(fmt="%(message)s", logger=logging.getLogger())
