@@ -20,7 +20,13 @@ def format_date(date: Date) -> str:
     return date.strftime(JSON_FORMAT_DATE)
 
 def parse_date(date_str: str) -> Date:
-    return datetime.datetime.strptime(date_str, JSON_FORMAT_DATE).date()
+    try:
+        return datetime.datetime.strptime(date_str, JSON_FORMAT_DATE).date()
+    except ValueError:
+        raise ValueError(f"Failed to parse date '{date_str}'.")
+
+def format_monetary(amount: float):
+    return f"{'-' if amount < 0 else ''}${abs(amount)}"
 
 def load_csv(csvpath: Path) -> [dict]:
     lines = csvpath.read_text('UTF-8').strip().split('\n')
