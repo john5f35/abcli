@@ -40,8 +40,8 @@ def init_orm(db: orm.Database):
         budget_items = orm.Set(lambda: BudgetItem, cascade_delete=True)
 
     class Balance(db.Entity, DictConversionMixin):
-        account = orm.Required(Account)
-        balance = orm.Required(Decimal, precision=16, scale=2)
+        account = orm.PrimaryKey(Account)
+        amount = orm.Required(Decimal, precision=16, scale=2)
         date = orm.Required(Date)
 
     class Post(db.Entity, DictConversionMixin):

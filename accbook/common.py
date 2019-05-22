@@ -6,6 +6,8 @@ from datetime import date as Date
 
 import click
 
+logger = logging.getLogger()
+
 JSON_FORMAT_DATE = '%d/%m/%Y'
 JSON_FORMAT = {
     'indent': 2,
@@ -50,8 +52,10 @@ def error_exit_on_exception(fnc):
         try:
             return fnc(*args, **kwargs)
         except Exception as e:
-            msg = e.message if getattr(e, 'message', None) else str(e)
-            logging.getLogger().error(msg)
+            try:
+                logger.error(e.args[0])
+            except Exception:
+                logger.error(f"Caught {e.__class__.__name__} at top level.")
             click.get_current_context().exit(1)
     return _wrapped
 

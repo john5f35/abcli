@@ -13,7 +13,7 @@ from accbook.cli.commands import init_command_groups
 
 def set_root_logger_level(cli_level):
     root_logger = logging.getLogger()
-    env_level = os.environ.get("LOG_LEVEL", "WARNING")
+    env_level = os.environ.get("LOG_LEVEL", "INFO")
     root_logger.setLevel(env_level)
     if cli_level:
         root_logger.setLevel(cli_level)
