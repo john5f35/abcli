@@ -12,6 +12,7 @@ pytest = "*"
 pyyaml = "*"
 pony = "*"
 coloredlogs = "*"
+tabulate = "*"
 
 [requires]
 python_version = "3.7"

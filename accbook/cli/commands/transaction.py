@@ -5,6 +5,9 @@ from hashlib import sha1
 
 import click
 from pony import orm
+import textwrap
+from tabulate import tabulate
+
 from accbook.common import (
     Date, format_date, parse_date, format_monetary,
     JSON_FORMAT_DATE, error_exit_on_exception
@@ -44,6 +47,7 @@ def cmd_add(db, date: str, accounts, amounts, create_missing: bool):
 
     txn = txn_add(db, date, accounts, amounts)
     txn_show(txn)
+    return 0
 
 
 @orm.db_session
@@ -55,13 +59,27 @@ def txn_add(db, date: Date, accounts: [str], amounts: [float]):
 
     return db.Transaction(uid=uid, date=date, posts=posts)
 
+@cli.command('show')
+@click.argument('uid')
+@click.pass_obj
+@orm.db_session
+@error_exit_on_exception
+def cmd_show(db, uid: str):
+    try:
+        txn = db.Transaction[uid]
+        txn_show(txn)
+        return 0
+    except orm.ObjectNotFound:
+        raise KeyError(f"Transaction '{uid}' not found.")
+
+
 @orm.db_session
 def txn_show(txn):
-    logger.info(f"Transaction (uid={txn.uid}):")
+    logger.info(f"Transaction '{txn.uid}':")
     logger.info(f"  date: {txn.date}")
     logger.info(f"  posts:")
-    for post in txn.posts:
-        logger.info(f"    {post.account.name}: {format_monetary(post.amount)}")
+    table = [[post.account.name, format_monetary(post.amount)] for post in txn.posts]
+    logger.info(textwrap.indent(tabulate(table, tablefmt="plain"), '    '))
 
 # @cli.command('import')
 # @click.argument('json_file', type=click.Path(exists=True, dir_okay=False))
