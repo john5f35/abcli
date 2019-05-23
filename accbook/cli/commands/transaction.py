@@ -23,15 +23,24 @@ def cli():
     help='Account of a post')
 @click.option('--post-amount', '--amount', '-a', 'amounts', type=click.FLOAT, multiple=True, required=True,
     help='Amount of a post')
+@click.option("--create-missing", '-n', is_flag=True, default=False,
+    help='Create an account if not found')
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_add(db, date: str, accounts, amounts):
+def cmd_add(db, date: str, accounts, amounts, create_missing: bool):
     date = parse_date(date)
     assert len(accounts) == len(amounts), "Number of post account and amount should be the same."
     _sum = sum(amounts)
     if _sum != 0.0:
         raise ValueError(f"Sum of post amounts is not 0 (sum = {format_monetary(_sum)})!")
+
+    for name in accounts:
+        if db.Account.get(name=name) is None:
+            if create_missing:
+                db.Account(name=name)
+            else:
+                raise KeyError(f"Account '{name}' not found, and no --create-missing specified.")
 
     txn = txn_add(db, date, accounts, amounts)
     txn_show(txn)
@@ -39,14 +48,7 @@ def cmd_add(db, date: str, accounts, amounts):
 
 @orm.db_session
 def txn_add(db, date: Date, accounts: [str], amounts: [float]):
-    def get_or_new_account(name: str):
-        try:
-            return db.Account[name]
-        except orm.ObjectNotFound:
-            logger.info(f"Created account '{name}'.")
-            return db.Account(name=name)
-
-    accounts = [get_or_new_account(name) for name in accounts]
+    accounts = [db.Account[name] for name in accounts]
 
     posts = [db.Post(account=acc, amount=amn) for acc, amn in zip(accounts, amounts)]
     uid = sha1(f"{date}{accounts}{amounts}{random.random()}".encode()).hexdigest()
