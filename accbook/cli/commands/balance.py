@@ -3,7 +3,12 @@ import datetime
 
 import click
 from pony import orm
-from accbook.common import Date, format_date, parse_date, JSON_FORMAT_DATE, error_exit_on_exception
+from tabulate import tabulate
+import textwrap
+from accbook.common import (
+    Date, format_date, parse_date, format_monetary,
+    JSON_FORMAT_DATE, error_exit_on_exception
+)
 
 logger = logging.getLogger()
 
@@ -28,7 +33,10 @@ def cmd_set(db, account: str, balance: float, date: str):
             obj.amount = balance
             obj.date = date
         else:
-            db.Balance(account=account, amount=balance, date=date)
+            obj = db.Balance(account=account, amount=balance, date=date)
+        logger.info(f"Balance:")
+        table = [[str(obj.date), obj.account.name, format_monetary(obj.amount)]]
+        logger.info(textwrap.indent(tabulate(table, tablefmt="plain"), "  "))
         return 0
     except ValueError:
         raise ValueError(f"Failed to parse date '{date}'.")

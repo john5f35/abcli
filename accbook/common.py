@@ -59,9 +59,9 @@ def error_exit_on_exception(fnc):
             return fnc(*args, **kwargs)
         except Exception as e:
             try:
-                logger.error(e.args[0])
+                logger.error(f"{e.__class__.__name__}: {e.args[0]}")
             except Exception:
-                logger.error(f"Caught {e.__class__.__name__} at top level.")
+                logger.error(f"{e.__class__.__name__}")
             click.get_current_context().exit(1)
     return _wrapped
 

@@ -13,6 +13,7 @@ pyyaml = "*"
 pony = "*"
 coloredlogs = "*"
 tabulate = "*"
+tqdm = "*"
 
 [requires]
 python_version = "3.7"
