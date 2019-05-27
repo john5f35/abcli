@@ -19,14 +19,14 @@ def cli():
 @cli.command('set')
 @click.argument('account')
 @click.argument('balance', type=click.FLOAT)
-@click.option('--date', '-d', default=format_date(Date.today()),
+@click.option('--date', '-d', type=click.DateTime(formats=[JSON_FORMAT_DATE]), default=format_date(Date.today()),
     help='Date of balance; default to today.')
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_set(db, account: str, balance: float, date: str):
+def cmd_set(db, account: str, balance: float, date: datetime.datetime):
     try:
-        date = parse_date(date)
+        date = date.date()
         account = db.Account[account]
         obj = db.Balance.get(account=account)
         if obj:

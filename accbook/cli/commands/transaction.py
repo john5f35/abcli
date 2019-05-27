@@ -26,7 +26,7 @@ def cli():
     pass
 
 @cli.command('add')
-@click.option('--date', '-d', default=format_date(Date.today()),
+@click.option('--date', '-d', type=click.DateTime(formats=[JSON_FORMAT_DATE]), default=format_date(Date.today()),
     help='Date of transaction; default to today.')
 @click.option('--post-account', '--from', '-f', 'accounts', multiple=True, required=True,
     help='Account of a post')
@@ -37,8 +37,8 @@ def cli():
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_add(db, date: str, accounts, amounts, create_missing: bool):
-    date = parse_date(date)
+def cmd_add(db, date: datetime.datetime, accounts, amounts, create_missing: bool):
+    date = date.date()
     assert len(accounts) == len(amounts), "Number of post account and amount should be the same."
     _sum = sum(amounts)
     if _sum != 0.0:
@@ -136,3 +136,14 @@ def _ensure_accounts(db, account_names, create_missing: bool):
                 raise KeyError(f"Account '{name}' not found, and no --create-missing specified.")
             else:
                 db.Account(name=name)
+
+# TODO: command 'search' / 'list'
+
+@cli.command('list')
+@click.option('--date-from', '--from', '-f', type=click.DateTime(formats=JSON_FORMAT_DATE),
+    help="List transactions from specified date (inclusive)")
+@click.pass_obj
+@orm.db_session
+@error_exit_on_exception
+def cmd_list(db, date_from):
+    pass

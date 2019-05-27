@@ -13,5 +13,6 @@ def init_command_groups(root):
             mod = importlib.import_module(mod_name, __name__)
             cli = getattr(mod, 'cli')
             root.add_command(cli)
-        except Exception:
+        except Exception as e:
+            logger.error(f'Caught {e} while importing {pysrc}.')
             logger.warning(f"Skipped {pysrc} when searching for sub-command groups")

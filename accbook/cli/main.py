@@ -39,3 +39,5 @@ init_command_groups(cli)
 
 if __name__ == '__main__':
     globals()['cli']()
+
+# TODO: turn this cli into repl using https://github.com/click-contrib/click-repl
