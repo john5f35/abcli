@@ -136,17 +136,18 @@ def _ensure_accounts(db, account_names, create_missing: bool):
             else:
                 db.Account(name=name)
 
-# TODO: command 'search' / 'list'
 
 @cli.command('summary')
 @click.option('--date-from', '--from', '-f', type=DateType(),
     help="Summarise transactions from specified date (inclusive)")
 @click.option('--date-to', '--to', '-t', type=DateType(),
     help="Summarise transactions to specified date (exclusive)")
+@click.option('--depth', '-d', type=click.IntRange(min=1, max=10), default=10,
+    help="Aggregation level on account name")
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_summary(db, date_from: Date, date_to: Date):
+def cmd_summary(db, date_from: Date, date_to: Date, depth: int):
     def _txn_in_date_range(txn: db.Transaction):
         if date_from and txn.date < date_from:
             return False
@@ -154,11 +155,15 @@ def cmd_summary(db, date_from: Date, date_to: Date):
             return False
         return True
 
+    def _name_at_depth(name: str):
+        return ':'.join(name.split(':')[:depth])
+
     sum_dict = {}
     query = db.Post.select(lambda p: not ((date_from and p.transaction.date < date_from) or (date_to and p.transaction.date >= date_to)))
 
     for post in query:
-        sum_dict[post.account.name] = sum_dict.get(post.account.name, 0.0) + float(post.amount)
+        name = _name_at_depth(post.account.name)
+        sum_dict[name] = sum_dict.get(name, 0.0) + float(post.amount)
 
     table = [[k, format_monetary(v)] for k, v in (sorted(sum_dict.items(), key=lambda tup: tup[1]))]
     logger.info(textwrap.indent(tabulate(table, tablefmt="plain"), ""))
