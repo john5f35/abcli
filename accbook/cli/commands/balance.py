@@ -7,7 +7,7 @@ from tabulate import tabulate
 import textwrap
 from accbook.common import (
     Date, format_date, parse_date, format_monetary,
-    JSON_FORMAT_DATE, error_exit_on_exception
+    JSON_FORMAT_DATE, error_exit_on_exception, DateType
 )
 
 logger = logging.getLogger()
@@ -19,14 +19,13 @@ def cli():
 @cli.command('set')
 @click.argument('account')
 @click.argument('balance', type=click.FLOAT)
-@click.option('--date', '-d', type=click.DateTime(formats=[JSON_FORMAT_DATE]), default=format_date(Date.today()),
+@click.option('--date', '-d', type=DateType(), default=format_date(Date.today()),
     help='Date of balance; default to today.')
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_set(db, account: str, balance: float, date: datetime.datetime):
+def cmd_set(db, account: str, balance: float, date: Date):
     try:
-        date = date.date()
         account = db.Account[account]
         obj = db.Balance.get(account=account)
         if obj:

@@ -1,6 +1,6 @@
 import logging
 import time
-import datetime
+from datetime import datetime as DateTime
 import random
 import json
 from typing import *
@@ -15,7 +15,7 @@ from tqdm import tqdm as pbar
 
 from accbook.common import (
     Date, format_date, parse_date, format_monetary,
-    JSON_FORMAT_DATE, error_exit_on_exception
+    JSON_FORMAT_DATE, error_exit_on_exception, DateType
 )
 from accbook.cli.commands import balance as mod_balance
 
@@ -26,7 +26,7 @@ def cli():
     pass
 
 @cli.command('add')
-@click.option('--date', '-d', type=click.DateTime(formats=[JSON_FORMAT_DATE]), default=format_date(Date.today()),
+@click.option('--date', '-d', type=DateType(), default=format_date(Date.today()),
     help='Date of transaction; default to today.')
 @click.option('--post-account', '--from', '-f', 'accounts', multiple=True, required=True,
     help='Account of a post')
@@ -37,8 +37,7 @@ def cli():
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_add(db, date: datetime.datetime, accounts, amounts, create_missing: bool):
-    date = date.date()
+def cmd_add(db, date: Date, accounts, amounts, create_missing: bool):
     assert len(accounts) == len(amounts), "Number of post account and amount should be the same."
     _sum = sum(amounts)
     if _sum != 0.0:
@@ -139,11 +138,27 @@ def _ensure_accounts(db, account_names, create_missing: bool):
 
 # TODO: command 'search' / 'list'
 
-@cli.command('list')
-@click.option('--date-from', '--from', '-f', type=click.DateTime(formats=JSON_FORMAT_DATE),
-    help="List transactions from specified date (inclusive)")
+@cli.command('summary')
+@click.option('--date-from', '--from', '-f', type=DateType(),
+    help="Summarise transactions from specified date (inclusive)")
+@click.option('--date-to', '--to', '-t', type=DateType(),
+    help="Summarise transactions to specified date (exclusive)")
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_list(db, date_from):
-    pass
+def cmd_summary(db, date_from: Date, date_to: Date):
+    def _txn_in_date_range(txn: db.Transaction):
+        if date_from and txn.date < date_from:
+            return False
+        if date_to and txn.date >= date_to:
+            return False
+        return True
+
+    sum_dict = {}
+    query = db.Post.select(lambda p: not ((date_from and p.transaction.date < date_from) or (date_to and p.transaction.date >= date_to)))
+
+    for post in query:
+        sum_dict[post.account.name] = sum_dict.get(post.account.name, 0.0) + float(post.amount)
+
+    table = [[k, format_monetary(v)] for k, v in (sorted(sum_dict.items(), key=lambda tup: tup[1]))]
+    logger.info(textwrap.indent(tabulate(table, tablefmt="plain"), ""))

@@ -26,7 +26,7 @@ def parse_date(date_str: str) -> Date:
         raise ValueError(f"Failed to parse date '{date_str}'.")
 
 def format_monetary(amount: float):
-    return f"{'-' if amount < 0 else ''}${abs(amount)}"
+    return f"{'-' if amount < 0 else ''}${abs(amount):.2f}"
 
 def load_csv(csvpath: Path) -> [dict]:
     lines = csvpath.read_text('UTF-8').strip().split('\n')
@@ -65,3 +65,11 @@ def error_exit_on_exception(fnc):
             click.get_current_context().exit(1)
     return _wrapped
 
+class DateType(click.ParamType):
+    name = 'date'
+
+    def convert(self, value, param, ctx):
+        try:
+            return parse_date(value)
+        except ValueError:
+            self.fail(f"Failed to parse date '{value}', must be in format '{JSON_FORMAT_DATE}'", param, ctx)
