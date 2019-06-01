@@ -3,6 +3,8 @@ from pathlib import Path
 import datetime
 import logging
 from datetime import date as Date
+import traceback
+import sys
 
 import click
 
@@ -57,11 +59,13 @@ def error_exit_on_exception(fnc):
     def _wrapped(*args, **kwargs):
         try:
             return fnc(*args, **kwargs)
-        except Exception as e:
+        except Exception:
+            exc_t, exc_v, tb = sys.exc_info()
+            # logger.error(''.join(traceback.format_exception(exc_t, exc_v, tb)))
             try:
-                logger.error(f"{e.__class__.__name__}: {e.args[0]}")
+                logger.error(f"{exc_v.__class__.__name__}: {exc_v.args[0]}")
             except Exception:
-                logger.error(f"{e.__class__.__name__}")
+                logger.error(f"{exc_v.__class__.__name__}")
             click.get_current_context().exit(1)
     return _wrapped
 

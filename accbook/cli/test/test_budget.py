@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import uuid
 
 import click
 from click.testing import CliRunner
@@ -63,4 +64,33 @@ def test_budget_list(tmp_path):
     res = CliRunner().invoke(cli, [str(db_file), 'budget', 'list'])
     assert res.exit_code == 0, str(res)
 
+    print()
+    print(res.output)
+
+
+def test_budget_progress(tmp_path):
+    db, db_file = setup_db(tmp_path)
+
+    accounts = ["TestAccount", "Expenses"]
+
+    with orm.db_session:
+        account0 = db.Account(name=accounts[0])
+        account1 = db.Account(name=accounts[1])
+        budget = db.Budget(date_from=Date(2019, 1, 1), date_to=Date(2019, 1, 31), items=[
+            db.BudgetItem(account=account0, amount=-1234),
+            db.BudgetItem(account=account1, amount=2345)
+        ])
+        db.Transaction(uid=str(uuid.uuid4()), date=Date(2019, 1, 3), posts=[
+            db.Post(account=account0, amount=-23),
+            db.Post(account=account1, amount=23)
+        ])
+        db.Transaction(uid=str(uuid.uuid4()), date=Date(2019, 1, 8), posts=[
+            db.Post(account=account0, amount=-4359),
+            db.Post(account=account1, amount=4359)
+        ])
+
+    res = CliRunner().invoke(cli, [str(db_file), 'budget', 'progress', str(budget.id)])
+    assert res.exit_code == 0, str(res)
+
+    print()
     print(res.output)

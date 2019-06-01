@@ -148,13 +148,6 @@ def _ensure_accounts(db, account_names, create_missing: bool):
 @orm.db_session
 @error_exit_on_exception
 def cmd_summary(db, date_from: Date, date_to: Date, depth: int):
-    def _txn_in_date_range(txn: db.Transaction):
-        if date_from and txn.date < date_from:
-            return False
-        if date_to and txn.date >= date_to:
-            return False
-        return True
-
     def _name_at_depth(name: str):
         return ':'.join(name.split(':')[:depth])
 
