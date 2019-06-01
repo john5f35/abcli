@@ -45,6 +45,20 @@ def cmd_import(db, budget_json_path: str):
     return 0
 
 
+@cli.command("delete")
+@click.argument("budget-id", type=click.INT)
+@click.pass_obj
+@orm.db_session
+@error_exit_on_exception
+def cmd_delete(db, budget_id: int):
+    try:
+        db.Budget[budget_id].delete()
+        logger.info(f"Budget {budget_id} deleted.")
+        return 0
+    except orm.ObjectNotFound:
+        raise KeyError(f"Budget with id {budget_id} not found")
+
+
 @cli.command("list")
 @click.pass_obj
 @orm.db_session

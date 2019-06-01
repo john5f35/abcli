@@ -68,6 +68,26 @@ def test_budget_list(tmp_path):
     print(res.output)
 
 
+def test_budget_delete(tmp_path):
+    db, db_file = setup_db(tmp_path)
+
+    accounts = ["TestAccount", "Expenses"]
+
+    with orm.db_session:
+        account0 = db.Account(name=accounts[0])
+        account1 = db.Account(name=accounts[1])
+        budget = db.Budget(date_from=Date(2019, 1, 1), date_to=Date(2019, 1, 31), items=[
+            db.BudgetItem(account=account0, amount=-1234),
+            db.BudgetItem(account=account1, amount=2345)
+        ])
+
+    res = CliRunner().invoke(cli, [str(db_file), 'budget', 'delete', str(budget.id)])
+    assert res.exit_code == 0, str(res)
+
+    with orm.db_session:
+        assert db.Budget.get(id=1) is None
+
+
 def test_budget_progress(tmp_path):
     db, db_file = setup_db(tmp_path)
 
