@@ -4,7 +4,13 @@ import json
 
 import click
 from pony import orm
-from accbook.common import parse_date, JSON_FORMAT_DATE, error_exit_on_exception
+import textwrap
+from tabulate import tabulate
+
+from accbook.common import (
+    parse_date, format_date, JSON_FORMAT_DATE,
+    error_exit_on_exception
+)
 
 logger = logging.getLogger()
 
@@ -35,3 +41,13 @@ def cmd_import(db, budget_json_path: str):
     budget = db.Budget(date_from=date_from, date_to=date_to, items=budget_items)
     logger.info(f"Added budget ({budget.id})")
     return 0
+
+@cli.command("list")
+@click.pass_obj
+@orm.db_session
+def cmd_list(db):
+    query = db.Budget.select(lambda b: True).order_by(db.Budget.date_from)
+
+    table = [[b.id, format_date(b.date_from), format_date(b.date_to)] for b in query]
+
+    logger.info(textwrap.indent(tabulate(table, headers=('id', 'date_from', 'date_to'), tablefmt="plain"), ""))

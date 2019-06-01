@@ -3,9 +3,9 @@ import json
 
 import click
 from click.testing import CliRunner
-from pony.orm import *
+from pony import orm
 
-from accbook.common import parse_date, format_date
+from accbook.common import parse_date, format_date, Date
 from accbook.cli.main import cli
 from accbook.cli.test.common import setup_db
 
@@ -14,32 +14,53 @@ def test_import_budget(tmp_path: Path):
 
     date_from = parse_date("01/03/2019")
     date_to = parse_date("31/03/2019")
+    accounts = ["TestAccount", "Expenses"]
     sample_budget = {
         "date_from": format_date(date_from),
         "date_to": format_date(date_to),
         "items": [
             {
-                "account": "TestAccount",
+                "account": accounts[0],
                 "amount": 500
             },
             {
-                "account": "Expenses",
+                "account": accounts[1],
                 "amount": 200
             }
         ]
     }
-    json_file = tmp_path / "budget.json"
 
+    with orm.db_session:
+        db.Account(name=accounts[0])
+        db.Account(name=accounts[1])
+
+    json_file = tmp_path / "budget.json"
     with json_file.open(mode='w') as fp:
         json.dump(sample_budget, fp, indent=2, separators=",:")
 
-    CliRunner().invoke(cli, [str(db_file), 'account', 'add', 'TestAccount'])
-    CliRunner().invoke(cli, [str(db_file), 'account', 'add', 'Expenses'])
+
     res = CliRunner().invoke(cli, [str(db_file), 'budget', 'import', str(json_file)])
     assert res.exit_code == 0, str(res)
 
-    with db_session:
+    with orm.db_session:
         query = db.Budget.select(lambda b: b.date_from == date_from and b.date_to == date_to)
         assert len(query) == 1
         budget = query.first()
         assert len(budget.items) == 2
+
+
+def test_budget_list(tmp_path):
+    db, db_file = setup_db(tmp_path)
+
+    accounts = ["TestAccount", "Expenses"]
+
+    with orm.db_session:
+        budget = db.Budget(date_from=Date.today(), date_to=Date.today(), items=[
+            db.BudgetItem(account=db.Account(name=accounts[0]), amount=1234),
+            db.BudgetItem(account=db.Account(name=accounts[1]), amount=2345)
+        ])
+
+    res = CliRunner().invoke(cli, [str(db_file), 'budget', 'list'])
+    assert res.exit_code == 0, str(res)
+
+    print(res.output)
