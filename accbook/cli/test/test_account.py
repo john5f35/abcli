@@ -7,14 +7,8 @@ from pony.orm import *
 from accbook.common import parse_date
 from accbook.cli.main import cli
 from accbook.cli.model import init_orm
+from accbook.cli.test.common import setup_db
 
-
-def setup_db(tmp_path: Path):
-    tmpfile = tmp_path / 'tmp.db'
-
-    db = Database(provider='sqlite', filename=str(tmpfile), create_db=True)
-    init_orm(db)
-    return db, tmpfile
 
 def test_add_account(tmp_path):
     db, db_file = setup_db(tmp_path)
