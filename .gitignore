@@ -1,5 +1,6 @@
 # Personal data
 data/
+config*.json
 *.csv
 *.yaml
 

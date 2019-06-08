@@ -1,6 +1,0 @@
-{
-  "db-config": {
-    "provider": "sqlite",
-    "filename": "tmp.db"
-  }
-}
