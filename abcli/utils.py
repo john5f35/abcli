@@ -33,6 +33,7 @@ def error_exit_on_exception(fnc):
         try:
             return fnc(*args, **kwargs)
         except Exception:
+            # raise
             exc_t, exc_v, tb = sys.exc_info()
             # logger.error(''.join(traceback.format_exception(exc_t, exc_v, tb)))
             try:

@@ -7,7 +7,8 @@ from pony import orm
 
 from abcli.utils import parse_date, format_date, Date
 from abcli.main import cli
-from abcli import setup_db
+from abcli.test import setup_db, invoke_cmd
+
 
 def test_import_budget(tmp_path: Path):
     db, db_file = setup_db(tmp_path)
@@ -38,8 +39,8 @@ def test_import_budget(tmp_path: Path):
     with json_file.open(mode='w') as fp:
         json.dump(sample_budget, fp, indent=2, separators=",:")
 
+    res = invoke_cmd(db_file, ['budget', 'import', str(json_file)])
 
-    res = CliRunner().invoke(cli, [str(db_file), 'budget', 'import', str(json_file)])
     assert res.exit_code == 0, str(res)
 
     with orm.db_session:
@@ -60,7 +61,7 @@ def test_budget_list(tmp_path):
             db.BudgetItem(account=db.Account(name=accounts[1]), amount=2345)
         ])
 
-    res = CliRunner().invoke(cli, [str(db_file), 'budget', 'list'])
+    res = invoke_cmd(db_file, ['budget', 'list'])
     assert res.exit_code == 0, str(res)
 
     print()
@@ -80,7 +81,7 @@ def test_budget_delete(tmp_path):
             db.BudgetItem(account=account1, amount=2345)
         ])
 
-    res = CliRunner().invoke(cli, [str(db_file), 'budget', 'delete', str(budget.id)])
+    res = invoke_cmd(db_file, ['budget', 'delete', str(budget.id)])
     assert res.exit_code == 0, str(res)
 
     with orm.db_session:
@@ -108,7 +109,7 @@ def test_budget_progress(tmp_path):
             db.Post(account=account1, amount=4359)
         ])
 
-    res = CliRunner().invoke(cli, [str(db_file), 'budget', 'progress', str(budget.id)])
+    res = invoke_cmd(db_file, ['budget', 'progress', str(budget.id)])
     assert res.exit_code == 0, str(res)
 
     print()
