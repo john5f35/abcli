@@ -36,7 +36,7 @@ def cli(ctx: click.Context, log_level, config_path: Path):
         config = json.load(fp)
         ctx.meta.update(config)
 
-    db = Database(create_db=True, **config['db'])
+    db = Database(**config['db'])
     init_orm(db)
     ctx.obj = db
 

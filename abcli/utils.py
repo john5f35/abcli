@@ -35,7 +35,7 @@ def error_exit_on_exception(fnc):
         except Exception:
             # raise
             exc_t, exc_v, tb = sys.exc_info()
-            # logger.error(''.join(traceback.format_exception(exc_t, exc_v, tb)))
+            logger.error(''.join(traceback.format_exception(exc_t, exc_v, tb)))
             try:
                 logger.error(f"{exc_v.__class__.__name__}: {exc_v.args[0]}")
             except Exception:

@@ -14,6 +14,7 @@ pony = "*"
 coloredlogs = "*"
 tabulate = "*"
 tqdm = "*"
+psycopg2-binary = "*"
 
 [requires]
 python_version = "3.7"

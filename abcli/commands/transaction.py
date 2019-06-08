@@ -104,7 +104,7 @@ def cmd_import(db, txn_json_path: str, create_missing: bool):
     ctx: click.Context = click.get_current_context()
     ctx.invoke(mod_balance.cmd_set, account=txn_json['account'],
                                     balance=txn_json['balance']['balance'],
-                                    date=txn_json['balance']['date'])
+                                    date=parse_date(txn_json['balance']['date']))
 
     for txn in txn_json['transactions']:
         txn_add(db, parse_date(txn['date']), txn['posts'])
