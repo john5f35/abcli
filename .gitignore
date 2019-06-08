@@ -1,8 +1,5 @@
 # Personal data
 data/
-csv/
-rulebooks/
-beans/
 *.csv
 *.yaml
 
