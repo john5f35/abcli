@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pony.orm import Database
 
-from accbook.cli.model import init_orm
+from abcli.model import init_orm
 
 def setup_db(tmp_path: Path):
     tmpfile = tmp_path / 'tmp.db'

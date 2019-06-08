@@ -6,7 +6,7 @@ from pony import orm
 import textwrap
 from tabulate import tabulate
 
-from accbook.common import (
+from abcli.utils import (
     parse_date, format_date, format_monetary,
     error_exit_on_exception
 )

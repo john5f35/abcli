@@ -1,7 +1,6 @@
 from pony import orm
 
-from accbook.cli.model import init_orm
-from accbook.common import format_date, Date
+from abcli.model import init_orm
 
 
 def test_todictrepr():

@@ -1,14 +1,11 @@
-import os, sys
+import os
 import logging
-from pathlib import Path
-import json
 
 import click
-import coloredlogs
 from pony.orm import Database, set_sql_debug
 
-from accbook.cli.model import init_orm
-from accbook.cli.commands import init_command_groups
+from abcli.model import init_orm
+from abcli.commands import init_command_groups
 
 
 def set_root_logger_level(cli_level):

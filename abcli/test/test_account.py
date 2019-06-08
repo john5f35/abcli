@@ -1,13 +1,8 @@
-from pathlib import Path
-
-import click
 from click.testing import CliRunner
 from pony.orm import *
 
-from accbook.common import parse_date
-from accbook.cli.main import cli
-from accbook.cli.model import init_orm
-from accbook.cli.test.common import setup_db
+from abcli.main import cli
+from abcli import setup_db
 
 
 def test_add_account(tmp_path):
