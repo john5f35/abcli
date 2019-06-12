@@ -5,6 +5,15 @@ from abcli.utils import format_date
 
 from pony import orm
 
+
+ACCOUNT_TYPES = ('Income', 'Expense', 'Asset', 'Liability')
+
+
+def account_name_at_depth(name: str, depth: int):
+    assert depth >= 1
+    return ':'.join(name.split(':')[:depth])
+
+
 class DictConversionMixin:
     def to_dictrepr(self, simple=True, visited=set()):
         visited.add(self)

@@ -12,6 +12,7 @@ from abcli.utils import (
     Date, format_date, parse_date, format_monetary,
     error_exit_on_exception, DateType
 )
+from abcli.model import ACCOUNT_TYPES, account_name_at_depth
 from abcli.commands import balance as mod_balance
 
 logger = logging.getLogger()
@@ -143,18 +144,31 @@ def _ensure_accounts(db, account_names, create_missing: bool):
 @orm.db_session
 @error_exit_on_exception
 def cmd_summary(db, date_from: Date, date_to: Date, depth: int):
-    def _name_at_depth(name: str):
-        return ':'.join(name.split(':')[:depth])
 
     sum_dict = {}
     query = get_posts_between_period(db, date_from, date_to)
 
     for post in query:
-        name = _name_at_depth(post.account.name)
+        name = account_name_at_depth(post.account.name, depth)
         sum_dict[name] = sum_dict.get(name, 0.0) + float(post.amount)
 
-    table = [[k, format_monetary(v)] for k, v in (sorted(sum_dict.items(), key=lambda tup: tup[1]))]
-    logger.info(textwrap.indent(tabulate(table, tablefmt="plain"), ""))
+    _report_summary(sum_dict)
+
+
+def _report_summary(sum_dict: Dict[str, float]):
+    categ_dict = {ty: [] for ty in ACCOUNT_TYPES}
+
+    for acc_name, sum_amount in sum_dict.items():
+        categ_dict[account_name_at_depth(acc_name, 1)].append((acc_name, sum_amount))
+
+    total_dict = {ty: sum([a for _, a in lst]) for ty, lst in categ_dict.items()}
+    sorted_categ_dict = {ty: sorted(sum_lst, key=lambda tup: abs(tup[1])) for ty, sum_lst in categ_dict.items()}
+    categ_dict_with_perc = {ty: [(n, a, a / total_dict[ty], abs(a / total_dict['Income'])) for n, a in lst] for ty, lst in sorted_categ_dict.items()}
+
+    table = [(n, format_monetary(a), f"{perc_ty * 100:.2f}%", f"{perc_ttl * 100:.2f}%")
+             for _, lst in categ_dict_with_perc.items()
+             for n, a, perc_ty, perc_ttl in lst]
+    logger.info(textwrap.indent(tabulate(table, headers=("account", "amount", "% of account type", "% of total income")), "  "))
 
 
 @orm.db_session
