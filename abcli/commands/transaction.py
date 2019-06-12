@@ -147,7 +147,7 @@ def cmd_summary(db, date_from: Date, date_to: Date, depth: int):
         return ':'.join(name.split(':')[:depth])
 
     sum_dict = {}
-    query = db.Post.select(lambda p: not ((date_from and p.transaction.date < date_from) or (date_to and p.transaction.date >= date_to)))
+    query = get_posts_between_period(db, date_from, date_to)
 
     for post in query:
         name = _name_at_depth(post.account.name)
@@ -155,3 +155,17 @@ def cmd_summary(db, date_from: Date, date_to: Date, depth: int):
 
     table = [[k, format_monetary(v)] for k, v in (sorted(sum_dict.items(), key=lambda tup: tup[1]))]
     logger.info(textwrap.indent(tabulate(table, tablefmt="plain"), ""))
+
+
+@orm.db_session
+def get_posts_between_period(db, date_from: Date, date_to: Date) -> orm.core.Query:
+    if date_from and date_to:
+        return db.Post.select(lambda p: p.transaction.date >= date_from and p.transaction.date < date_to)
+
+    if date_from and date_to is None:
+        return db.Post.select(lambda p: p.transaction.date >= date_from)
+
+    if date_to and date_from is None:
+        return db.Post.select(lambda p: p.transaction.date < date_to)
+
+    return db.Post.select()
