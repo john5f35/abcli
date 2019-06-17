@@ -1,9 +1,11 @@
 from datetime import date as Date, timedelta as TimeDelta
 from decimal import Decimal
-
-from abcli.utils import format_date
+from dataclasses import dataclass
 
 from pony import orm
+from treelib import Tree
+
+from abcli.utils import format_date
 
 
 ACCOUNT_TYPES = ('Income', 'Expense', 'Asset', 'Liability')
@@ -12,6 +14,31 @@ ACCOUNT_TYPES = ('Income', 'Expense', 'Asset', 'Liability')
 def account_name_at_depth(name: str, depth: int):
     assert depth >= 1
     return ':'.join(name.split(':')[:depth])
+
+
+class AccoutTree(Tree):
+    class Amount(float):
+        @property
+        def value(self):
+            return self
+
+    def add_account(self, name: str, amount: float):
+        if name == '':
+            self.create_node(identifier='', data=AccoutTree.Amount())
+            return
+        parent = name.rpartition(':')[0]
+        if not self.contains(parent):
+            self.add_account(parent, 0)
+        self.create_node(identifier=name, parent=parent, data=AccoutTree.Amount())
+        self.update_node(name, amount=amount)
+
+    def update_node(self, nid, **attrs):
+        amount = attrs['amount']
+        this = self.get_node(nid)
+        super().update_node(nid, data=this.data + attrs['amount'])
+        if nid != '':
+            parent = nid.rpartition(':')[0]
+            self.update_node(parent, amount=amount)
 
 
 class DictConversionMixin:

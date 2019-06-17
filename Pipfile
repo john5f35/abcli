@@ -15,6 +15,7 @@ coloredlogs = "*"
 tabulate = "*"
 tqdm = "*"
 psycopg2-binary = "*"
+treelib = "*"
 
 [requires]
 python_version = "3.7"
