@@ -153,6 +153,7 @@ def cmd_summary(db, date_from: Date, date_to: Date, depth: int):
         sum_dict[name] = sum_dict.get(name, 0.0) + float(post.amount)
 
     _report_summary(sum_dict)
+    _show_summary_tree(sum_dict)
 
 
 def _report_summary(sum_dict: Dict[str, float]):
@@ -169,6 +170,14 @@ def _report_summary(sum_dict: Dict[str, float]):
              for _, lst in categ_dict_with_perc.items()
              for n, a, perc_ty, perc_ttl in lst]
     logger.info(textwrap.indent(tabulate(table, headers=("account", "amount", "% of account type", "% of total income")), "  "))
+
+
+def _show_summary_tree(sum_dict: Dict[str, float]):
+    tree = AccountTree()
+    for acc_name, sum_amount in sum_dict.items():
+        tree.add_account(acc_name, sum_amount)
+
+    tree.show()
 
 
 @orm.db_session

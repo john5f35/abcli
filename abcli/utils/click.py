@@ -1,31 +1,13 @@
-import csv
 from pathlib import Path
-import datetime
 import logging
-from datetime import date as Date
 import traceback
 import sys
 
 import click
 
+from abcli.utils.model import parse_date, JSON_FORMAT_DATE
+
 logger = logging.getLogger()
-
-JSON_FORMAT_DATE = '%d/%m/%Y'
-
-
-def format_date(date: Date) -> str:
-    return date.strftime(JSON_FORMAT_DATE)
-
-
-def parse_date(date_str: str) -> Date:
-    try:
-        return datetime.datetime.strptime(date_str, JSON_FORMAT_DATE).date()
-    except ValueError:
-        raise ValueError(f"Failed to parse date '{date_str}'.")
-
-
-def format_monetary(amount: float):
-    return f"{'-' if amount < 0 else ''}${abs(amount):.2f}"
 
 
 def error_exit_on_exception(fnc):

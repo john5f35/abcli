@@ -16,29 +16,29 @@ def account_name_at_depth(name: str, depth: int):
     return ':'.join(name.split(':')[:depth])
 
 
-class AccoutTree(Tree):
-    class Amount(float):
-        @property
-        def value(self):
-            return self
-
-    def add_account(self, name: str, amount: float):
-        if name == '':
-            self.create_node(identifier='', data=AccoutTree.Amount())
-            return
-        parent = name.rpartition(':')[0]
-        if not self.contains(parent):
-            self.add_account(parent, 0)
-        self.create_node(identifier=name, parent=parent, data=AccoutTree.Amount())
-        self.update_node(name, amount=amount)
-
-    def update_node(self, nid, **attrs):
-        amount = attrs['amount']
-        this = self.get_node(nid)
-        super().update_node(nid, data=this.data + attrs['amount'])
-        if nid != '':
-            parent = nid.rpartition(':')[0]
-            self.update_node(parent, amount=amount)
+# class AccountTree(Tree):
+#     class Amount(float):
+#         @property
+#         def value(self):
+#             return self
+#
+#     def add_account(self, name: str, amount: float):
+#         if name == '':
+#             self.create_node(identifier='', data=AccountTree.Amount())
+#             return
+#         parent = name.rpartition(':')[0]
+#         if not self.contains(parent):
+#             self.add_account(parent, 0)
+#         self.create_node(identifier=name, parent=parent, data=AccountTree.Amount())
+#         self.update_node(name, amount=amount)
+#
+#     def update_node(self, nid, **attrs):
+#         amount = attrs['amount']
+#         this = self.get_node(nid)
+#         super().update_node(nid, data=this.data + attrs['amount'])
+#         if nid != '':
+#             parent = nid.rpartition(':')[0]
+#             self.update_node(parent, amount=amount)
 
 
 class DictConversionMixin:
