@@ -11,36 +11,6 @@ from abcli.utils import format_date
 ACCOUNT_TYPES = ('Income', 'Expense', 'Asset', 'Liability')
 
 
-def account_name_at_depth(name: str, depth: int):
-    assert depth >= 1
-    return ':'.join(name.split(':')[:depth])
-
-
-# class AccountTree(Tree):
-#     class Amount(float):
-#         @property
-#         def value(self):
-#             return self
-#
-#     def add_account(self, name: str, amount: float):
-#         if name == '':
-#             self.create_node(identifier='', data=AccountTree.Amount())
-#             return
-#         parent = name.rpartition(':')[0]
-#         if not self.contains(parent):
-#             self.add_account(parent, 0)
-#         self.create_node(identifier=name, parent=parent, data=AccountTree.Amount())
-#         self.update_node(name, amount=amount)
-#
-#     def update_node(self, nid, **attrs):
-#         amount = attrs['amount']
-#         this = self.get_node(nid)
-#         super().update_node(nid, data=this.data + attrs['amount'])
-#         if nid != '':
-#             parent = nid.rpartition(':')[0]
-#             self.update_node(parent, amount=amount)
-
-
 class DictConversionMixin:
     def to_dictrepr(self, simple=True, visited=set()):
         visited.add(self)
@@ -64,6 +34,7 @@ class DictConversionMixin:
             elif isinstance(dic[attr.name], Date):
                 dic[attr.name] = format_date(val)
         return dic
+
 
 def init_orm(db: orm.Database):
 
@@ -106,7 +77,3 @@ def init_orm(db: orm.Database):
         budget = orm.Optional(Budget)
 
     db.generate_mapping(create_tables=True)
-
-
-def is_balance_account(account_name: str) -> bool:
-    return account_name.startswith("Asset") or account_name.startswith("Liability")

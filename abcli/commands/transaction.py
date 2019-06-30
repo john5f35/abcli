@@ -150,17 +150,22 @@ def cmd_summary(db, date_from: Date, date_to: Date, depth: int):
     query = get_posts_between_period(db, date_from, date_to)
 
     for post in query:
-        name = account_name_at_depth(post.account.name, depth)
+        name = _account_name_at_depth(post.account.name, depth)
         sum_dict[name] = sum_dict.get(name, 0.0) + float(post.amount)
 
     _show_summary_tree(sum_dict)
+
+
+def _account_name_at_depth(name: str, depth: int):
+    assert depth >= 1
+    return ':'.join(name.split(':')[:depth])
 
 
 def _report_summary(sum_dict: Dict[str, float]):
     categ_dict = {ty: [] for ty in ACCOUNT_TYPES}
 
     for acc_name, sum_amount in sum_dict.items():
-        categ_dict[account_name_at_depth(acc_name, 1)].append((acc_name, sum_amount))
+        categ_dict[_account_name_at_depth(acc_name, 1)].append((acc_name, sum_amount))
 
     total_dict = {ty: sum([a for _, a in lst]) for ty, lst in categ_dict.items()}
     sorted_categ_dict = {ty: sorted(sum_lst, key=lambda tup: abs(tup[1])) for ty, sum_lst in categ_dict.items()}
