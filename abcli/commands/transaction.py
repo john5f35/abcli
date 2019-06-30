@@ -12,25 +12,27 @@ from abcli.utils import (
     Date, format_date, parse_date, format_monetary,
     error_exit_on_exception, DateType
 )
-from abcli.model import ACCOUNT_TYPES, account_name_at_depth
+from abcli.model import ACCOUNT_TYPES
 from abcli.utils import AccountTree
 from abcli.commands import balance as mod_balance
 
 logger = logging.getLogger()
 
-@click.group(__name__[__name__.rfind('.')+1:])
+
+@click.group(__name__[__name__.rfind('.') + 1:])
 def cli():
     pass
 
+
 @cli.command('add')
 @click.option('--date', '-d', type=DateType(), default=format_date(Date.today()),
-    help='Date of transaction; default to today.')
+              help='Date of transaction; default to today.')
 @click.option('--post-account', '--from', '-f', 'accounts', multiple=True, required=True,
-    help='Account of a post')
+              help='Account of a post')
 @click.option('--post-amount', '--amount', '-a', 'amounts', type=click.FLOAT, multiple=True, required=True,
-    help='Amount of a post')
+              help='Amount of a post')
 @click.option("--create-missing", '-n', is_flag=True, default=False,
-    help='Create an account if not found')
+              help='Create an account if not found')
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
@@ -88,9 +90,10 @@ def txn_show(txn):
     table = [[post.account.name, format_monetary(post.amount)] for post in txn.posts]
     logger.info(textwrap.indent(tabulate(table, tablefmt="plain"), '    '))
 
+
 @cli.command('import')
 @click.option("--create-missing/--no-create-missing", default=True,
-    help="Create missing accounts.")
+              help="Create missing accounts.")
 @click.argument('txn_json_path', type=click.Path(exists=True, dir_okay=False))
 @click.pass_obj
 @orm.db_session
@@ -105,14 +108,15 @@ def cmd_import(db, txn_json_path: str, create_missing: bool):
     # Set operating account balance
     ctx: click.Context = click.get_current_context()
     ctx.invoke(mod_balance.cmd_set, account=txn_json['account'],
-                                    balance=txn_json['balance']['balance'],
-                                    date=parse_date(txn_json['balance']['date']))
+               balance=txn_json['balance']['balance'],
+               date=parse_date(txn_json['balance']['date']))
 
     for txn in txn_json['transactions']:
         txn_add(db, parse_date(txn['date']), txn['posts'])
     logger.info(f"Imported {len(txn_json['transactions'])} transactions")
 
     return 0
+
 
 def _collect_account_names(txn_json: Dict) -> Set[str]:
     account_names = set(txn_json['account'])
@@ -136,16 +140,15 @@ def _ensure_accounts(db, account_names, create_missing: bool):
 
 @cli.command('summary')
 @click.option('--date-from', '--from', '-f', type=DateType(),
-    help="Summarise transactions from specified date (inclusive)")
+              help="Summarise transactions from specified date (inclusive)")
 @click.option('--date-to', '--to', '-t', type=DateType(),
-    help="Summarise transactions to specified date (exclusive)")
+              help="Summarise transactions to specified date (exclusive)")
 @click.option('--depth', '-d', type=click.IntRange(min=1, max=10), default=10,
-    help="Aggregation level on account name")
+              help="Aggregation level on account name")
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
 def cmd_summary(db, date_from: Date, date_to: Date, depth: int):
-
     sum_dict = {}
     query = get_posts_between_period(db, date_from, date_to)
 
@@ -169,12 +172,14 @@ def _report_summary(sum_dict: Dict[str, float]):
 
     total_dict = {ty: sum([a for _, a in lst]) for ty, lst in categ_dict.items()}
     sorted_categ_dict = {ty: sorted(sum_lst, key=lambda tup: abs(tup[1])) for ty, sum_lst in categ_dict.items()}
-    categ_dict_with_perc = {ty: [(n, a, a / total_dict[ty], abs(a / total_dict['Income'])) for n, a in lst] for ty, lst in sorted_categ_dict.items()}
+    categ_dict_with_perc = {ty: [(n, a, a / total_dict[ty], abs(a / total_dict['Income'])) for n, a in lst] for ty, lst
+                            in sorted_categ_dict.items()}
 
     table = [(n, format_monetary(a), f"{perc_ty * 100:.2f}%", f"{perc_ttl * 100:.2f}%")
              for _, lst in categ_dict_with_perc.items()
              for n, a, perc_ty, perc_ttl in lst]
-    logger.info(textwrap.indent(tabulate(table, headers=("account", "amount", "% of account type", "% of total income")), "  "))
+    logger.info(
+        textwrap.indent(tabulate(table, headers=("account", "amount", "% of account type", "% of total income")), "  "))
 
 
 def _show_summary_tree(sum_dict: Dict[str, float]):

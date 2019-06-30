@@ -2,12 +2,10 @@ from pathlib import Path
 import json
 import uuid
 
-from click.testing import CliRunner
 from pony import orm
 
 from abcli.utils import parse_date, format_date, Date
-from abcli.main import cli
-from abcli.test import setup_db, invoke_cmd
+from abcli.commands.test import setup_db, invoke_cmd
 
 
 def test_import_budget(tmp_path: Path):

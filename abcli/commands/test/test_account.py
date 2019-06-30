@@ -1,6 +1,6 @@
 from pony.orm import *
 
-from abcli.test import setup_db, invoke_cmd
+from abcli.commands.test import setup_db, invoke_cmd
 
 
 def test_add_account(tmp_path_factory):
