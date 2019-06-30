@@ -1,6 +1,8 @@
 import datetime
 from datetime import date as Date
-from typing import Dict
+from typing import *
+
+from tabulate import tabulate
 
 JSON_FORMAT_DATE = '%d/%m/%Y'
 
@@ -48,5 +50,42 @@ class AccountTree:
         child_seg = rest.partition(':')[0]
         return self._children[child_seg].get(rest)
 
-    def format_string(self):
-        pass
+    def get_format_tuples(self) -> List[Tuple[str, str]]:
+        def _get_format_tuples(format_info):
+            segname, amount, level, is_last_child = format_info
+            prefix = _get_indent_prefix(level, is_last_child)
+            tree_str = prefix + segname
+            amount_str = format_monetary(amount)
+            return tree_str, amount_str
+
+        def _get_indent_prefix(level, is_last_child):
+            if level == 0:
+                return ""
+            if level == 1:
+                return (_SEG_CHILD_LAST if is_last_child else _SEG_CHILD_CONT) + _SEG_DASH * 2 + ' '
+            return _SEG_PARENT_CONT + ' ' * 3 + _get_indent_prefix(level - 1, is_last_child)
+
+        format_info = self._dfs(level=0, last_child=False)
+        format_tuples = list(map(_get_format_tuples, format_info))
+        return format_tuples
+
+    def format_string(self, tabular=True):
+        format_tuples = self.get_format_tuples()
+        if tabular:
+            return tabulate(format_tuples, tablefmt="plain", colalign=("left", "right"))
+        else:
+            format_strings = map(lambda tup: "{} ({})".format(*tup), format_tuples)
+            return '\n'.join(format_strings)
+
+    def _dfs(self, level: int, last_child: bool) -> List[Tuple[str, float, int, bool]]:
+        tuples = [(self.segname, self.amount, level, last_child)]
+        for idx, name in enumerate(self._children):
+            child = self._children[name]
+            tuples += child._dfs(level + 1, idx == len(self._children) - 1)
+        return tuples
+
+
+_SEG_CHILD_LAST = '└'
+_SEG_CHILD_CONT = '├'
+_SEG_PARENT_CONT = '│'
+_SEG_DASH = '─'

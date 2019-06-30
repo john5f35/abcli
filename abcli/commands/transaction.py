@@ -13,6 +13,7 @@ from abcli.utils import (
     error_exit_on_exception, DateType
 )
 from abcli.model import ACCOUNT_TYPES, account_name_at_depth
+from abcli.utils import AccountTree
 from abcli.commands import balance as mod_balance
 
 logger = logging.getLogger()
@@ -152,7 +153,6 @@ def cmd_summary(db, date_from: Date, date_to: Date, depth: int):
         name = account_name_at_depth(post.account.name, depth)
         sum_dict[name] = sum_dict.get(name, 0.0) + float(post.amount)
 
-    _report_summary(sum_dict)
     _show_summary_tree(sum_dict)
 
 
@@ -173,11 +173,14 @@ def _report_summary(sum_dict: Dict[str, float]):
 
 
 def _show_summary_tree(sum_dict: Dict[str, float]):
-    tree = AccountTree()
-    for acc_name, sum_amount in sum_dict.items():
-        tree.add_account(acc_name, sum_amount)
+    tuples = []
+    for acctype in ACCOUNT_TYPES:
+        tree = AccountTree(acctype)
+        for acc_name in filter(lambda name: name.startswith(acctype), sum_dict):
+            tree.add(acc_name, sum_dict[acc_name])
+        tuples += tree.get_format_tuples()
 
-    tree.show()
+    print(tabulate(tuples, tablefmt="plain", colalign=("left", "right")))
 
 
 @orm.db_session
