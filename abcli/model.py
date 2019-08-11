@@ -8,7 +8,7 @@ from treelib import Tree
 from abcli.utils import format_date
 
 
-ACCOUNT_TYPES = ('Income', 'Expense', 'Asset', 'Liability')
+ACCOUNT_TYPES = ('Income', 'Expenses', 'Assets', 'Liabilities')
 
 
 class DictConversionMixin:

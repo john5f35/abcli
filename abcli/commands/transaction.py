@@ -6,6 +6,7 @@ import uuid
 import click
 from pony import orm
 import textwrap
+import tabulate as tabulate_mod
 from tabulate import tabulate
 
 from abcli.utils import (
@@ -17,7 +18,7 @@ from abcli.utils import AccountTree
 from abcli.commands import balance as mod_balance
 
 logger = logging.getLogger()
-
+tabulate_mod.PRESERVE_WHITESPACE = True
 
 @click.group(__name__[__name__.rfind('.') + 1:])
 def cli():
@@ -119,7 +120,8 @@ def cmd_import(db, txn_json_path: str, create_missing: bool):
 
 
 def _collect_account_names(txn_json: Dict) -> Set[str]:
-    account_names = set(txn_json['account'])
+    account_names = set()
+    account_names.add(txn_json['account'])
 
     for txn in txn_json['transactions']:
         for post in txn['posts']:
