@@ -32,13 +32,14 @@ def set_root_logger_level(cli_level):
 def cli(ctx: click.Context, log_level, config_path: Path):
     set_root_logger_level(log_level)
 
-    with config_path.open('r') as fp:
-        config = json.load(fp)
-        ctx.meta.update(config)
+    if ctx.invoked_subcommand != 'csv':  # Doesn't need to initialise the db
+        with config_path.open('r') as fp:
+            config = json.load(fp)
+            ctx.meta.update(config)
 
-    db = Database(**config['db'])
-    init_orm(db)
-    ctx.obj = db
+        db = Database(**config['db'])
+        init_orm(db)
+        ctx.obj = db
 
 
 init_command_groups(cli)
