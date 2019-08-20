@@ -24,15 +24,15 @@ def row2txn(row: dict) -> dict:
         that = [{'account': acc, 'amount': amt} for acc, amt in eval(row[that_field]).items()]
     posts = this + that
     for p in posts:
-        p.update({'date_occur': row['date_occur'], 'date_commit': row['date_commit']})
+        p.update({'date_occurred': row['date_occurred'], 'date_resolved': row['date_resolved']})
 
     txn_sum = sum(map(lambda p: p['amount'], posts))
     assert math.isclose(txn_sum, 0.0, abs_tol=1e-09), \
         f"Transaction posts sum does not add up to 0 in '{row}' (sum: {txn_sum})"
 
     return {
-        'date_min_occur': row['date_occur'],
-        'date_max_commit': row['date_commit'],
+        'min_date_occurred': row['date_occurred'],
+        'max_date_resolved': row['date_resolved'],
         'description': row['description'],
         'ref': row['ref'],
         'posts': posts,
@@ -45,8 +45,8 @@ def _merge_same_refs(txns: [dict]) -> dict:
         posts.extend(txn['posts'])
 
     return {
-        'date_min_occur': format_date(min(map(lambda _txn: parse_date(_txn['date_min_occur']), txns))),
-        'date_max_commit': format_date(max(map(lambda _txn: parse_date(_txn['date_max_commit']), txns))),
+        'min_date_occurred': format_date(min(map(lambda _txn: parse_date(_txn['min_date_occurred']), txns))),
+        'max_date_resolved': format_date(max(map(lambda _txn: parse_date(_txn['max_date_resolved']), txns))),
         'description': txns[0]['description'],
         'ref': txns[0]['ref'],
         'posts': posts
@@ -63,7 +63,7 @@ def merge_txns(txns: [dict]) -> [dict]:
     for ref in by_ref:
         by_ref[ref] = _merge_same_refs(by_ref[ref])
 
-    sorted_txns = sorted(list(no_refs) + list(by_ref.values()), key=lambda _txn: parse_date(_txn['date_max_commit']))
+    sorted_txns = sorted(list(no_refs) + list(by_ref.values()), key=lambda _txn: parse_date(_txn['max_date_resolved']))
     return sorted_txns
 
 
@@ -73,7 +73,7 @@ def process(rows: [dict]) -> dict:
     return {
         'account': rows[0]['this'],
         'balance': {
-            'date': rows[0]['date_commit'],
+            'date': rows[0]['date_resolved'],
             'balance': float(rows[0]['balance'])
         },
         'transactions': txns
