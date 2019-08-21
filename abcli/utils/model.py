@@ -54,11 +54,12 @@ class AccountTree:
         child_seg = rest.partition(':')[0]
         return self._children[child_seg].get(rest)
 
-    def get_format_tuples(self, indent="") -> List[Tuple[str, str]]:
+    def get_format_tuples(self, indent="") -> List[Tuple[str, str, str]]:
         result = []
         tree_str = indent + self._get_prefix() + self.segname
         amount_str = format_monetary(self.amount)
-        result.append((tree_str, amount_str))
+        perc_of_parent = f"{self.amount / self._parent.amount * 100.00:.2f}%" if self._parent else ""
+        result.append((tree_str, amount_str, perc_of_parent))
         for child_seg in self._children:
             result += self._children[child_seg].get_format_tuples(indent)
         return result
@@ -92,7 +93,7 @@ class AccountTree:
     def format_string(self, tabular=True):
         format_tuples = self.get_format_tuples()
         if tabular:
-            return tabulate(format_tuples, tablefmt="plain", colalign=("left", "right"))
+            return tabulate(format_tuples, tablefmt="plain", colalign=("left", "right", "right"))
         else:
             format_strings = map(lambda tup: "{} ({})".format(*tup), format_tuples)
             return '\n'.join(format_strings)

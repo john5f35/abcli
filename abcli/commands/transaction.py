@@ -200,7 +200,8 @@ def _show_summary_tree(sum_dict: Dict[str, float], indent=""):
             tree.add(acc_name, sum_dict[acc_name])
         tuples += tree.get_format_tuples(indent)
 
-    print(tabulate(tuples, tablefmt="plain", colalign=("left", "right")))
+    print(tabulate(tuples, tablefmt="plain", headers=("account", "amount", "% of parent"),
+                   colalign=("left", "right", "right")))
 
 
 @orm.db_session
