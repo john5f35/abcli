@@ -15,11 +15,12 @@ logger = logging.getLogger()
 def cli():
     pass
 
+
 @cli.command('set')
 @click.argument('account')
 @click.argument('balance', type=click.FLOAT)
 @click.option('--date', '-d', type=DateType(), default=format_date(Date.today()),
-    help='Date of balance; default to today.')
+    help='Date of balance (end-of-day); default to today.')
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
@@ -29,17 +30,19 @@ def cmd_set(db, account: str, balance: float, date: Date):
         obj = db.Balance.get(account=account)
         if obj:
             obj.amount = balance
-            obj.date = date
+            obj.date_eod = date
         else:
-            obj = db.Balance(account=account, amount=balance, date=date)
+            obj = db.Balance(account=account, amount=balance, date_eod=date)
         logger.info(f"Balance:")
-        table = [[str(obj.date), obj.account.name, format_monetary(obj.amount)]]
+        table = [[str(obj.date_eod), obj.account.name, format_monetary(obj.amount)]]
         logger.info(textwrap.indent(tabulate(table, tablefmt="plain"), "  "))
         return 0
     except ValueError:
         raise ValueError(f"Failed to parse date '{date}'.")
     except orm.ObjectNotFound:
         raise KeyError(f"Account '{account}' does not exist.")
+
+# TODO: verify balance using transactions when setting it
 
 
 @cli.command('show')

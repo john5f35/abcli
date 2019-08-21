@@ -43,37 +43,25 @@ def init_orm(db: orm.Database):
         name = orm.PrimaryKey(str)
         balance = orm.Optional(lambda: Balance, cascade_delete=True)
         posts = orm.Set(lambda: Post, cascade_delete=True)
-        budget_items = orm.Set(lambda: BudgetItem, cascade_delete=True)
 
     class Balance(db.Entity, DictConversionMixin):
         account = orm.PrimaryKey(Account)
         amount = orm.Required(Decimal, precision=16, scale=2)
-        date = orm.Required(Date)
+        date_eod = orm.Required(Date)
 
     class Post(db.Entity, DictConversionMixin):
         account = orm.Required(Account)
         amount = orm.Required(Decimal, precision=16, scale=2)
-        description = orm.Optional(str)
+        date_occurred = orm.Required(Date)
+        date_resolved = orm.Required(Date)
         transaction = orm.Optional(lambda: Transaction)
 
     class Transaction(db.Entity, DictConversionMixin):
-        uid = orm.PrimaryKey(str)
-        date = orm.Required(Date)
+        uid = orm.PrimaryKey(str, auto=True)
+        min_date_occurred = orm.Required(Date)
+        max_date_resolved = orm.Required(Date)
+        description = orm.Optional(str)
+        ref = orm.Optional(str)
         posts = orm.Set(Post)
-        periodical = orm.Optional(lambda: Periodical)
-
-    class Periodical(db.Entity, DictConversionMixin):
-        period = orm.Required(TimeDelta)
-        transactions = orm.Set(Transaction)
-
-    class Budget(db.Entity, DictConversionMixin):
-        date_from = orm.Required(Date)
-        date_to = orm.Required(Date)
-        items = orm.Set(lambda: BudgetItem)
-
-    class BudgetItem(db.Entity, DictConversionMixin):
-        account = orm.Required(Account)
-        amount = orm.Required(Decimal, precision=16, scale=2)
-        budget = orm.Optional(Budget)
 
     db.generate_mapping(create_tables=True)

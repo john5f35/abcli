@@ -20,6 +20,5 @@ def test_todictrepr():
         assert account.to_dictrepr(simple=False) == {
             'name': 'TestAccount',
             'balance': None,
-            'budget_items': {},
             'posts': {}
         }

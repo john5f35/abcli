@@ -25,50 +25,6 @@ def cli():
     pass
 
 
-@cli.command('add')
-@click.option('--date', '-d', type=DateType(), default=format_date(Date.today()),
-              help='Date of transaction; default to today.')
-@click.option('--post-account', '--from', '-f', 'accounts', multiple=True, required=True,
-              help='Account of a post')
-@click.option('--post-amount', '--amount', '-a', 'amounts', type=click.FLOAT, multiple=True, required=True,
-              help='Amount of a post')
-@click.option("--create-missing", '-n', is_flag=True, default=False,
-              help='Create an account if not found')
-@click.pass_obj
-@orm.db_session
-@error_exit_on_exception
-def cmd_add(db, date: Date, accounts, amounts, create_missing: bool):
-    assert len(accounts) == len(amounts), "Number of post account and amount should be the same."
-    _sum = sum(amounts)
-    if _sum != 0.0:
-        raise ValueError(f"Sum of post amounts is not 0 (sum = {format_monetary(_sum)})!")
-
-    for name in accounts:
-        if db.Account.get(name=name) is None:
-            if create_missing:
-                db.Account(name=name)
-            else:
-                raise KeyError(f"Account '{name}' not found, and no --create-missing specified.")
-
-    _ensure_accounts(db, accounts, create_missing)
-    posts = [{
-        "account": acc,
-        "amount": amn
-    } for acc, amn in zip(accounts, amounts)]
-
-    txn = txn_add(db, date, posts)
-    txn_show(txn)
-    return 0
-
-
-@orm.db_session
-def txn_add(db, date: Date, posts: [dict], uid=None):
-    if uid is None:
-        # uid = sha1(f"{date}{''.join([p['account']+str(p['amount'])])}{random.random()}")
-        uid = str(uuid.uuid4())
-    return db.Transaction(uid=uid, date=date, posts=[db.Post(account=p['account'], amount=p['amount']) for p in posts])
-
-
 @cli.command('show')
 @click.argument('uid')
 @click.pass_obj
@@ -106,14 +62,25 @@ def cmd_import(db, txn_json_path: str, create_missing: bool):
     account_names = _collect_account_names(txn_json)
     _ensure_accounts(db, account_names, create_missing)
 
-    # Set operating account balance
+    # Update operating account balance
     ctx: click.Context = click.get_current_context()
     ctx.invoke(mod_balance.cmd_set, account=txn_json['account'],
                balance=txn_json['balance']['balance'],
                date=parse_date(txn_json['balance']['date']))
 
     for txn in txn_json['transactions']:
-        txn_add(db, parse_date(txn['date']), txn['posts'])
+        db.Transaction(
+            uid=str(uuid.uuid4()),
+            min_date_occurred=parse_date(txn['min_date_occurred']),
+            max_date_resolved=parse_date(txn['max_date_resolved']),
+            description=txn['description'],
+            ref=txn['ref'],
+            posts=[db.Post(account=db.Account[post['account']],
+                           amount=float(post['amount']),
+                           date_occurred=parse_date(post['date_occurred']),
+                           date_resolved=parse_date(post['date_resolved']))
+                   for post in txn['posts']]
+        )
     logger.info(f"Imported {len(txn_json['transactions'])} transactions")
 
     return 0
@@ -141,18 +108,19 @@ def _ensure_accounts(db, account_names, create_missing: bool):
 
 
 @cli.command('summary')
-@click.option('--date-from', '--from', '-f', type=DateType(),
-              help="Summarise transactions from specified date (inclusive)")
-@click.option('--date-to', '--to', '-t', type=DateType(),
-              help="Summarise transactions to specified date (exclusive)")
+@click.option('--date-from', '--from', '-f', type=DateType(), default=format_date(Date.fromtimestamp(0)),
+              help="Summarise transactions from specified date (inclusive); default to Epoch.")
+@click.option('--date-to', '--to', '-t', type=DateType(), default=format_date(Date.today()),
+              help="Summarise transactions to specified date (inclusive); default to today.")
+@click.option("--include-nonresolved", '-i', is_flag=True, help="Include non-resolved transactions.")
 @click.option('--depth', '-d', type=click.IntRange(min=1, max=10), default=10,
               help="Aggregation level on account name")
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_summary(db, date_from: Date, date_to: Date, depth: int):
+def cmd_summary(db, date_from: Date, date_to: Date, depth: int, include_nonresolved: bool):
     sum_dict = {}
-    query = get_posts_between_period(db, date_from, date_to)
+    query = get_posts_between_period(db, date_from, date_to, include_nonresolved)
 
     for post in query:
         name = _account_name_at_depth(post.account.name, depth)
@@ -196,14 +164,8 @@ def _show_summary_tree(sum_dict: Dict[str, float]):
 
 
 @orm.db_session
-def get_posts_between_period(db, date_from: Date, date_to: Date) -> orm.core.Query:
-    if date_from and date_to:
-        return db.Post.select(lambda p: p.transaction.date >= date_from and p.transaction.date < date_to)
-
-    if date_from and date_to is None:
-        return db.Post.select(lambda p: p.transaction.date >= date_from)
-
-    if date_to and date_from is None:
-        return db.Post.select(lambda p: p.transaction.date < date_to)
-
-    return db.Post.select()
+def get_posts_between_period(db, date_from: Date, date_to: Date, include_nonresolved=False) -> orm.core.Query:
+    if include_nonresolved:
+        return db.Post.select(lambda p: p.date_resolved >= date_from and p.date_occurred <= date_to)
+    else:
+        return db.Post.select(lambda p: p.date_resolved >= date_from and p.date_resolved <= date_to)

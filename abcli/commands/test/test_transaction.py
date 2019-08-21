@@ -1,6 +1,6 @@
 import uuid
 import random
-from datetime import date
+from datetime import date, timedelta
 
 from pony import orm
 
@@ -19,9 +19,10 @@ def test_get_transaction_between_periods():
         def _random_txn_on_date(_date: date):
             amount = random.randrange(1, 100000) / 100.0
             return db.Transaction(
-                uid=str(uuid.uuid4()), date=_date, posts=[
-                    db.Post(account=acc1, amount=amount),
-                    db.Post(account=acc2, amount=-amount)
+                uid=str(uuid.uuid4()), min_date_occurred=_date, max_date_resolved=_date,
+                posts=[
+                    db.Post(date_occurred=_date, date_resolved=_date + timedelta(days=1), account=acc1, amount=amount),
+                    db.Post(date_occurred=_date, date_resolved=_date + timedelta(days=1), account=acc2, amount=-amount)
                 ]
             )
         txn1 = _random_txn_on_date(date(2019, 1, 1))
@@ -29,15 +30,12 @@ def test_get_transaction_between_periods():
         txn3 = _random_txn_on_date(date(2019, 1, 4))
 
         _posts_from = lambda lst: set([p for txn in lst for p in txn.posts])
-        query = get_posts_between_period(db, None, None)
-        assert set(query) == _posts_from([txn1, txn2, txn3])
-
-        query = get_posts_between_period(db, date(2019, 1, 2), None)
-        assert set(query) == _posts_from([txn2, txn3])
-
-        query = get_posts_between_period(db, None, date(2019, 1, 4))
-        assert set(query) == _posts_from([txn1, txn2])
 
         query = get_posts_between_period(db, date(2018, 12, 29), date(2019, 1, 5))
         assert set(query) == _posts_from([txn1, txn2, txn3])
 
+        query = get_posts_between_period(db, date(2019, 1, 1), date(2019, 1, 4))
+        assert set(query) == _posts_from([txn1, txn2])
+
+        query = get_posts_between_period(db, date(2019, 1, 1), date(2019, 1, 4), include_nonresolved=True)
+        assert set(query) == _posts_from([txn1, txn2, txn3])
