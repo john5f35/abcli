@@ -3,6 +3,7 @@ data/
 config*.json
 *.csv
 *.yaml
+.idea
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
