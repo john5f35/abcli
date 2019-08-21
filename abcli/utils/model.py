@@ -54,13 +54,13 @@ class AccountTree:
         child_seg = rest.partition(':')[0]
         return self._children[child_seg].get(rest)
 
-    def get_format_tuples(self) -> List[Tuple[str, str]]:
+    def get_format_tuples(self, indent="") -> List[Tuple[str, str]]:
         result = []
-        tree_str = self._get_prefix() + self.segname
+        tree_str = indent + self._get_prefix() + self.segname
         amount_str = format_monetary(self.amount)
         result.append((tree_str, amount_str))
         for child_seg in self._children:
-            result += self._children[child_seg].get_format_tuples()
+            result += self._children[child_seg].get_format_tuples(indent)
         return result
 
     def _get_is_last_childs(self) -> List[bool]:

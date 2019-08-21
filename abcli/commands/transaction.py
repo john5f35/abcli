@@ -1,7 +1,9 @@
 import logging
-import json
+import csv
 from typing import *
 import uuid
+from pathlib import Path
+from collections import defaultdict
 
 import click
 from pony import orm
@@ -16,6 +18,8 @@ from abcli.utils import (
 from abcli.model import ACCOUNT_TYPES
 from abcli.utils import AccountTree
 from abcli.commands import balance as mod_balance
+from abcli.commands.csv import csv2json
+from abcli.utils.click import PathType
 
 logger = logging.getLogger()
 tabulate_mod.PRESERVE_WHITESPACE = True
@@ -26,38 +30,71 @@ def cli():
 
 
 @cli.command('show')
-@click.argument('uid')
+@click.option('--date-from', '--from', '-f', type=DateType(), default=format_date(Date.fromtimestamp(0)),
+              help="Summarise transactions from specified date (inclusive); default to Epoch.")
+@click.option('--date-to', '--to', '-t', type=DateType(), default=format_date(Date.today()),
+              help="Summarise transactions to specified date (inclusive); default to today.")
+@click.option('--account', '-a', help="Show transactions that involve a specific account.")
+@click.option("--include-nonresolved", '-i', is_flag=True, help="Include non-resolved transactions.")
+@click.option('--verbose', '-v', is_flag=True, help="Verbose output; include posts.")
+@click.option('--uid', help="Transaction id")
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_show(db, uid: str):
-    try:
-        txn = db.Transaction[uid]
-        txn_show(txn)
-        return 0
-    except orm.ObjectNotFound:
-        raise KeyError(f"Transaction '{uid}' not found.")
+def cmd_show(db, date_from: Date, date_to: Date, account: str, include_nonresolved: bool, verbose: bool, uid: str):
+    if uid:
+        try:
+            txn = db.Transaction[uid]
+            txn_show(txn, verbose)
+            return 0
+        except orm.ObjectNotFound:
+            raise KeyError(f"Transaction '{uid}' not found.")
+
+    txn_uids_shown = set()
+    query = get_posts_between_period(db, date_from, date_to, include_nonresolved)
+    if account:
+        query = query.filter(lambda post: post.account.name.startswith(account))
+
+    for post in query:
+        txn = post.transaction
+        if txn.uid not in txn_uids_shown:
+            txn_show(txn, verbose)
+            txn_uids_shown.add(txn.uid)
+            logger.info("")
 
 
 @orm.db_session
-def txn_show(txn):
-    logger.info(f"Transaction '{txn.uid}':")
-    logger.info(f"  date: {txn.date}")
-    logger.info(f"  posts:")
-    table = [[post.account.name, format_monetary(post.amount)] for post in txn.posts]
-    logger.info(textwrap.indent(tabulate(table, tablefmt="plain"), '    '))
+def txn_show(txn, verbose=True):
+    ref = f"({txn.ref})" if txn.ref else ""
+    logger.info(f"Transaction '{txn.uid}' {ref}:")
+    logger.info(f"  description: {txn.description}")
+    logger.info(f"  min date occurred: {txn.min_date_occurred}")
+    logger.info(f"  max date resolved: {txn.max_date_resolved}")
+    logger.info(f"  summary:")
+    sum_dic = defaultdict(float)
+    for post in txn.posts:
+        sum_dic[post.account.name] += float(post.amount)
+    logger.info(textwrap.indent(tabulate([[name, format_monetary(amount)] for name, amount in sum_dic.items() if amount != 0.0],
+                                         tablefmt="plain"), '    '))
+    if verbose:
+        logger.info(f"  posts:")
+        table = [[post.account.name, format_monetary(post.amount), post.date_occurred, post.date_resolved] for post in txn.posts]
+        logger.info(textwrap.indent(tabulate(table, headers=('account', 'amount', 'date occurred', 'date resolved'),
+                                             tablefmt="plain"), '    '))
 
 
 @cli.command('import')
 @click.option("--create-missing/--no-create-missing", default=True,
               help="Create missing accounts.")
-@click.argument('txn_json_path', type=click.Path(exists=True, dir_okay=False))
+@click.argument('csvpath', type=PathType(exists=True, dir_okay=False))
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_import(db, txn_json_path: str, create_missing: bool):
-    with open(txn_json_path) as fp:
-        txn_json = json.load(fp)
+def cmd_import(db, csvpath: Path, create_missing: bool):
+    with csvpath.open('r', encoding='utf-8') as fp:
+        reader = csv.DictReader(fp)
+        rows = list(reader)
+    txn_json = csv2json.process(rows)
 
     account_names = _collect_account_names(txn_json)
     _ensure_accounts(db, account_names, create_missing)
@@ -112,15 +149,18 @@ def _ensure_accounts(db, account_names, create_missing: bool):
               help="Summarise transactions from specified date (inclusive); default to Epoch.")
 @click.option('--date-to', '--to', '-t', type=DateType(), default=format_date(Date.today()),
               help="Summarise transactions to specified date (inclusive); default to today.")
+@click.option('--account', '-a', help="Only include transactions that involve a specific account.")
 @click.option("--include-nonresolved", '-i', is_flag=True, help="Include non-resolved transactions.")
 @click.option('--depth', '-d', type=click.IntRange(min=1, max=10), default=10,
               help="Aggregation level on account name")
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_summary(db, date_from: Date, date_to: Date, depth: int, include_nonresolved: bool):
+def cmd_summary(db, date_from: Date, date_to: Date, depth: int, account: str, include_nonresolved: bool):
     sum_dict = {}
     query = get_posts_between_period(db, date_from, date_to, include_nonresolved)
+    if account:
+        query = query.filter(lambda post: post.account.name.startswith(account))
 
     for post in query:
         name = _account_name_at_depth(post.account.name, depth)
@@ -152,13 +192,13 @@ def _report_summary(sum_dict: Dict[str, float]):
         textwrap.indent(tabulate(table, headers=("account", "amount", "% of account type", "% of total income")), "  "))
 
 
-def _show_summary_tree(sum_dict: Dict[str, float]):
+def _show_summary_tree(sum_dict: Dict[str, float], indent=""):
     tuples = []
     for acctype in ACCOUNT_TYPES:
         tree = AccountTree(acctype)
         for acc_name in filter(lambda name: name.startswith(acctype), sum_dict):
             tree.add(acc_name, sum_dict[acc_name])
-        tuples += tree.get_format_tuples()
+        tuples += tree.get_format_tuples(indent)
 
     print(tabulate(tuples, tablefmt="plain", colalign=("left", "right")))
 

@@ -78,18 +78,3 @@ def process(rows: [dict]) -> dict:
         },
         'transactions': txns
     }
-
-
-@click.command('csv2json')
-@click.option("-o", "--output", required=True, type=click.Path(dir_okay=False),
-              callback=lambda c, p, v: Path(v))
-@click.argument("csvpath", type=click.Path(exists=True, dir_okay=False),
-                callback=lambda c, p, v: Path(v))
-def cmd_csv2json(csvpath: Path, output: Path):
-    with csvpath.open('r', encoding='utf-8') as fp:
-        reader = csv.DictReader(fp)
-        rows = list(reader)
-    res = process(rows)
-    with output.open('w', encoding='utf-8') as fp:
-        json.dump(res, fp, separators=(',', ': '), indent=2)
-
