@@ -1,41 +1,36 @@
-import uuid
-import random
-from datetime import date, timedelta
+from datetime import date
 
 from pony import orm
 
-from abcli.model import init_orm
 from abcli.commands.transaction import get_posts_between_period
+from abcli.model import init_orm
 
 
-def test_get_transaction_between_periods():
+def test_get_posts_between_period():
     orm.set_sql_debug(True)
     db = orm.Database(provider='sqlite', filename=':memory:', create_db=True)
     init_orm(db)
 
     with orm.db_session:
-        acc1 = db.Account(name="TestAccount1")
-        acc2 = db.Account(name="TestAccount2")
-        def _random_txn_on_date(_date: date):
-            amount = random.randrange(1, 100000) / 100.0
-            return db.Transaction(
-                uid=str(uuid.uuid4()), min_date_occurred=_date, max_date_resolved=_date,
-                posts=[
-                    db.Post(date_occurred=_date, date_resolved=_date + timedelta(days=1), account=acc1, amount=amount),
-                    db.Post(date_occurred=_date, date_resolved=_date + timedelta(days=1), account=acc2, amount=-amount)
-                ]
-            )
-        txn1 = _random_txn_on_date(date(2019, 1, 1))
-        txn2 = _random_txn_on_date(date(2019, 1, 3))
-        txn3 = _random_txn_on_date(date(2019, 1, 4))
+        db.Post(date_occurred=date(2019, 1, 2), date_resolved=date(2019, 1, 4), account=db.Account(name='A'), amount=123)
 
-        _posts_from = lambda lst: set([p for txn in lst for p in txn.posts])
+        def captured_post(date_from, date_to, include_nonresolved):
+            return len(get_posts_between_period(db, date_from, date_to, include_nonresolved)) == 1
 
-        query = get_posts_between_period(db, date(2018, 12, 29), date(2019, 1, 5))
-        assert set(query) == _posts_from([txn1, txn2, txn3])
+        assert captured_post(date(2019, 1, 1), date(2019, 1, 5), False)
+        assert captured_post(date(2019, 1, 1), date(2019, 1, 5), True)
 
-        query = get_posts_between_period(db, date(2019, 1, 1), date(2019, 1, 4))
-        assert set(query) == _posts_from([txn1, txn2])
+        assert captured_post(date(2019, 1, 1), date(2019, 1, 4), False)
+        assert captured_post(date(2019, 1, 1), date(2019, 1, 4), True)
+        assert captured_post(date(2019, 1, 2), date(2019, 1, 4), False)
+        assert captured_post(date(2019, 1, 2), date(2019, 1, 4), True)
 
-        query = get_posts_between_period(db, date(2019, 1, 1), date(2019, 1, 4), include_nonresolved=True)
-        assert set(query) == _posts_from([txn1, txn2, txn3])
+        assert not captured_post(date(2019, 1, 1), date(2019, 1, 3), False)
+        assert captured_post(date(2019, 1, 1), date(2019, 1, 3), True)
+
+        assert not captured_post(date(2019, 1, 2), date(2019, 1, 3), False)
+        assert captured_post(date(2019, 1, 2), date(2019, 1, 3), True)
+
+        assert not captured_post(date(2019, 1, 3), date(2019, 1, 3), False)
+        assert captured_post(date(2019, 1, 3), date(2019, 1, 3), True)
+

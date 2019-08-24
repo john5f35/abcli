@@ -1,6 +1,7 @@
 from datetime import date as Date, timedelta as TimeDelta
 from decimal import Decimal
-from dataclasses import dataclass
+from typing import *
+import uuid
 
 from pony import orm
 from treelib import Tree
@@ -63,5 +64,16 @@ def init_orm(db: orm.Database):
         description = orm.Optional(str)
         ref = orm.Optional(str)
         posts = orm.Set(Post)
+
+        @classmethod
+        def from_posts(cls, posts: List[Tuple[Account, float, Date, Date]]):
+            db_posts = [db.Post(account=acc, amount=amt, date_occurred=date_o, date_resolved=date_r)
+                         for acc, amt, date_o, date_r in posts]
+            return db.Transaction(
+                uid=str(uuid.uuid4()),
+                min_date_occurred=min(p.date_occurred for p in db_posts),
+                max_date_resolved=max(p.date_resolved for p in db_posts),
+                posts=db_posts
+            )
 
     db.generate_mapping(create_tables=True)

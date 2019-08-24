@@ -4,6 +4,8 @@ from typing import *
 import uuid
 from pathlib import Path
 from collections import defaultdict
+from datetime import datetime as DateTime
+import calendar
 
 import click
 from pony import orm
@@ -34,6 +36,7 @@ def cli():
               help="Summarise transactions from specified date (inclusive); default to Epoch.")
 @click.option('--date-to', '--to', '-t', type=DateType(), default=format_date(Date.today()),
               help="Summarise transactions to specified date (inclusive); default to today.")
+@click.option('--month', '-m', type=click.DateTime(("%m/%Y",)))
 @click.option('--account', '-a', help="Show transactions that involve a specific account.")
 @click.option("--include-nonresolved", '-i', is_flag=True, help="Include non-resolved transactions.")
 @click.option('--verbose', '-v', is_flag=True, help="Verbose output; include posts.")
@@ -41,7 +44,12 @@ def cli():
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_show(db, date_from: Date, date_to: Date, account: str, include_nonresolved: bool, verbose: bool, uid: str):
+def cmd_show(db, month: DateTime, date_from: Date, date_to: Date,
+             account: str, include_nonresolved: bool, verbose: bool, uid: str):
+    if month:
+        date_from = Date(month.year, month.month, 1)
+        date_to = Date(month.year, month.month, calendar.monthrange(month.year, month.month)[1])
+
     if uid:
         try:
             txn = db.Transaction[uid]
@@ -149,6 +157,7 @@ def _ensure_accounts(db, account_names, create_missing: bool):
               help="Summarise transactions from specified date (inclusive); default to Epoch.")
 @click.option('--date-to', '--to', '-t', type=DateType(), default=format_date(Date.today()),
               help="Summarise transactions to specified date (inclusive); default to today.")
+@click.option('--month', '-m', type=click.DateTime(("%m/%Y",)))
 @click.option('--account', '-a', help="Only include transactions that involve a specific account.")
 @click.option("--include-nonresolved", '-i', is_flag=True, help="Include non-resolved transactions.")
 @click.option('--depth', '-d', type=click.IntRange(min=1, max=10), default=10,
@@ -156,7 +165,11 @@ def _ensure_accounts(db, account_names, create_missing: bool):
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_summary(db, date_from: Date, date_to: Date, depth: int, account: str, include_nonresolved: bool):
+def cmd_summary(db, month: DateTime, date_from: Date, date_to: Date, depth: int, account: str, include_nonresolved: bool):
+    if month:
+        date_from = Date(month.year, month.month, 1)
+        date_to = Date(month.year, month.month, calendar.monthrange(month.year, month.month)[1])
+
     sum_dict = {}
     query = get_posts_between_period(db, date_from, date_to, include_nonresolved)
     if account:
@@ -174,30 +187,14 @@ def _account_name_at_depth(name: str, depth: int):
     return ':'.join(name.split(':')[:depth])
 
 
-def _report_summary(sum_dict: Dict[str, float]):
-    categ_dict = {ty: [] for ty in ACCOUNT_TYPES}
-
-    for acc_name, sum_amount in sum_dict.items():
-        categ_dict[_account_name_at_depth(acc_name, 1)].append((acc_name, sum_amount))
-
-    total_dict = {ty: sum([a for _, a in lst]) for ty, lst in categ_dict.items()}
-    sorted_categ_dict = {ty: sorted(sum_lst, key=lambda tup: abs(tup[1])) for ty, sum_lst in categ_dict.items()}
-    categ_dict_with_perc = {ty: [(n, a, a / total_dict[ty], abs(a / total_dict['Income'])) for n, a in lst] for ty, lst
-                            in sorted_categ_dict.items()}
-
-    table = [(n, format_monetary(a), f"{perc_ty * 100:.2f}%", f"{perc_ttl * 100:.2f}%")
-             for _, lst in categ_dict_with_perc.items()
-             for n, a, perc_ty, perc_ttl in lst]
-    logger.info(
-        textwrap.indent(tabulate(table, headers=("account", "amount", "% of account type", "% of total income")), "  "))
-
-
 def _show_summary_tree(sum_dict: Dict[str, float], indent=""):
     tuples = []
     for acctype in ACCOUNT_TYPES:
         tree = AccountTree(acctype)
         for acc_name in filter(lambda name: name.startswith(acctype), sum_dict):
             tree.add(acc_name, sum_dict[acc_name])
+        # if tree.has_children():
+        #     tuples += tree.get_format_tuples(indent)
         tuples += tree.get_format_tuples(indent)
 
     print(tabulate(tuples, tablefmt="plain", headers=("account", "amount", "% of parent"),
@@ -209,4 +206,4 @@ def get_posts_between_period(db, date_from: Date, date_to: Date, include_nonreso
     if include_nonresolved:
         return db.Post.select(lambda p: p.date_resolved >= date_from and p.date_occurred <= date_to)
     else:
-        return db.Post.select(lambda p: p.date_resolved >= date_from and p.date_resolved <= date_to)
+        return db.Post.select(lambda p: p.date_occurred >= date_from and p.date_resolved <= date_to)

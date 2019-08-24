@@ -31,6 +31,9 @@ class AccountTree:
         self._parent = parent
         self._children: OrderedDict[str, AccountTree] = OrderedDict()
 
+    def has_children(self):
+        return len(self._children) != 0
+
     def add(self, name: str, amount: float):
         segname, _, rest = name.partition(':')
         if segname != self.segname:

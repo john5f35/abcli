@@ -1,5 +1,6 @@
 import logging
-import json
+import json, yaml
+from pathlib import Path
 
 import click
 from pony import orm
@@ -10,6 +11,8 @@ from abcli.utils import (
     parse_date, format_date, format_monetary,
     error_exit_on_exception
 )
+from abcli.commands.transaction import get_posts_between_period
+from abcli.utils.click import PathType
 
 logger = logging.getLogger()
 
@@ -19,85 +22,43 @@ def cli():
     pass
 
 
-@cli.command("import")
-@click.argument("budget-json-path", type=click.Path(exists=True, dir_okay=False))
-@click.pass_obj
-@orm.db_session
-@error_exit_on_exception
-def cmd_import(db, budget_json_path: str):
-    with open(budget_json_path, "r") as fp:
-        budget_json = json.load(fp)
-
-    date_from = parse_date(budget_json['date_from'])
-    date_to = parse_date(budget_json['date_to'])
-
-    # Construct BudgetItems
-    budget_items = []
-    for item_json in budget_json['items']:
-        account_name = item_json['account']
-        if db.Account.get(name=account_name) is None:
-            raise KeyError(f"Account {account_name} not found!")
-        account = db.Account[account_name]
-        budget_items.append(db.BudgetItem(account=account, amount=item_json['amount']))
-
-    budget = db.Budget(date_from=date_from, date_to=date_to, items=budget_items)
-    logger.info(f"Added budget ({budget.id})")
-    return 0
-
-
-@cli.command("delete")
-@click.argument("budget-id", type=click.INT)
-@click.pass_obj
-@orm.db_session
-@error_exit_on_exception
-def cmd_delete(db, budget_id: int):
-    try:
-        db.Budget[budget_id].delete()
-        logger.info(f"Budget {budget_id} deleted.")
-        return 0
-    except orm.ObjectNotFound:
-        raise KeyError(f"Budget with id {budget_id} not found")
-
-
-@cli.command("list")
-@click.pass_obj
-@orm.db_session
-@error_exit_on_exception
-def cmd_list(db):
-    query = db.Budget.select().order_by(db.Budget.date_from)
-
-    table = [[b.id, format_date(b.date_from), format_date(b.date_to)] for b in query]
-
-    logger.info(textwrap.indent(tabulate(table, headers=('id', 'date_from', 'date_to')), ""))
-    return 0
-
-
 @cli.command("progress")
-@click.argument("budget-id", type=click.INT)
+@click.argument("budget-yaml", type=PathType(dir_okay=False, exists=True))
+@click.option("--include-nonresolved", '-i', is_flag=True, help="Include non-resolved transactions.")
 @click.pass_obj
 @orm.db_session
 @error_exit_on_exception
-def cmd_progress(db, budget_id: int):
+def cmd_progress(db, budget_yaml: Path, include_nonresolved: bool):
     try:
-        budget = db.Budget[budget_id]
-        progress = _evaluate_progress(db, budget)
+        budget = load_budget_yaml(budget_yaml.read_text('utf-8'))
+        progress = evaluate_progress(db, budget, include_nonresolved)
         logger.info((tabulate(
             [(n, format_monetary(s), format_monetary(a), f"{p * 100:.2f}%") for n, s, a, p in progress],
             headers=('account_name', 'consumed', 'budgeted', 'progress'))))
         return 0
-    except orm.ObjectNotFound:
-        raise KeyError(f"Budget with id {budget_id} not found.")
+    except yaml.YAMLError:
+        raise KeyError(f"Failed to load budget YAML {budget_yaml}")
+
+
+def load_budget_yaml(yaml_text: str):
+    try:
+        budget = yaml.full_load(yaml_text)
+        budget['date_from'] = parse_date(budget['date_from'])
+        budget['date_to'] = parse_date(budget['date_to'])
+        items = budget.get('items', {})
+        for account_name in items:
+            items[account_name] = float(items[account_name])
+        return budget
+    except Exception:
+        raise yaml.YAMLError()
 
 
 @orm.db_session
-def _evaluate_progress(db, budget):
+def evaluate_progress(db, budget, include_nonresolved: bool):
     progress = []
-    for item in budget.items:
-        account = item.account
-        amount = item.amount
-        txn_sum = orm.select(p.amount for p in db.Post
-                             if p.account.name.startswith(account.name) and
-                             (budget.date_from <= p.transaction.date and p.transaction.date <= budget.date_to)) \
-                      .sum()
-        progress.append((account.name, txn_sum, amount, txn_sum / amount))
+    budget_items = budget.get('items', {})
+    for account_name, amount in budget_items.items():
+        all_posts_in_period = get_posts_between_period(db, budget['date_from'], budget['date_to'], include_nonresolved)
+        txn_sum = orm.select(p.amount for p in all_posts_in_period if p.account.name.startswith(account_name)).sum()
+        progress.append((account_name, float(txn_sum), amount, (float(txn_sum) / amount)))
     return progress
