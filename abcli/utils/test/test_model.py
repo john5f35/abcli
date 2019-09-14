@@ -1,4 +1,4 @@
-from abcli.utils.model import AccountTree
+from abcli.utils.model import AccountTree, format_monetary
 
 
 def test_account_tree():
@@ -24,9 +24,11 @@ def test_account_tree_format():
     tree.add('A:D', 3)
     tree.add('A:D:E', 5)
 
-    assert tree.format_string(tabular=False) == \
-           ("A ($13.00)\n"
-            "├── B ($5.00)\n"
-            "│   └── C (-$10.00)\n"
-            "└── D ($8.00)\n"
-            "    └── E ($5.00)")
+    callback = lambda tree: (f"({format_monetary(tree.amount)})", )
+    assert tree.get_format_tuples(callback=callback, indent="") == [
+        ("A", "($13.00)"),
+        ("├── B", "($5.00)"),
+        ("│   └── C", "(-$10.00)"),
+        ("└── D", "($8.00)"),
+        ("    └── E", "($5.00)")
+    ]

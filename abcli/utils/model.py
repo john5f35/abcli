@@ -27,6 +27,7 @@ def format_monetary(amount: float):
 class AccountTree:
     def __init__(self, segname: str, parent: 'AccountTree' = None):
         self.segname = segname
+        self.fullname = f'{parent.segname}:{segname}' if parent else segname
         self.amount = 0
         self._parent = parent
         self._children: OrderedDict[str, AccountTree] = OrderedDict()
@@ -57,14 +58,20 @@ class AccountTree:
         child_seg = rest.partition(':')[0]
         return self._children[child_seg].get(rest)
 
-    def get_format_tuples(self, indent="") -> List[Tuple[str, str, str]]:
+    def get_format_tuples(self, callback: Callable[['AccountTree'], Tuple], indent="") -> List[Tuple]:
+        """
+        Returns a list of tuples to be formatted (tabulated).
+        The first element is the tree structure of account name,
+        the rest are returned by the callback function.
+        :param callback: a function that maps an AccountTree to the fields to be displayed as tuples
+        :param indent: indent prefix string
+        :return:
+        """
         result = []
         tree_str = indent + self._get_prefix() + self.segname
-        amount_str = format_monetary(self.amount)
-        perc_of_parent = f"{self.amount / self._parent.amount * 100.00:.2f}%" if self._parent else ""
-        result.append((tree_str, amount_str, perc_of_parent))
+        result.append((tree_str,) + callback(self))
         for child_seg in self._children:
-            result += self._children[child_seg].get_format_tuples(indent)
+            result += self._children[child_seg].get_format_tuples(callback, indent)
         return result
 
     def _get_is_last_childs(self) -> List[bool]:
@@ -92,14 +99,6 @@ class AccountTree:
         else:
             prefix += _SEG_CHILD_CONT + _SEG_DASH * 2 + ' '
         return prefix
-
-    def format_string(self, tabular=True):
-        format_tuples = self.get_format_tuples()
-        if tabular:
-            return tabulate(format_tuples, tablefmt="plain", colalign=("left", "right", "right"))
-        else:
-            format_strings = map(lambda tup: "{} ({})".format(*tup), format_tuples)
-            return '\n'.join(format_strings)
 
 
 _SEG_CHILD_LAST = '└'

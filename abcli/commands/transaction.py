@@ -188,6 +188,9 @@ def _account_name_at_depth(name: str, depth: int):
 
 
 def _show_summary_tree(sum_dict: Dict[str, float], indent=""):
+    def _format_tree(tree):
+        return (format_monetary(tree.amount),
+                f"{tree.amount / tree._parent.amount * 100.00:.2f}%" if tree._parent else "")
     tuples = []
     for acctype in ACCOUNT_TYPES:
         tree = AccountTree(acctype)
@@ -195,7 +198,8 @@ def _show_summary_tree(sum_dict: Dict[str, float], indent=""):
             tree.add(acc_name, sum_dict[acc_name])
         # if tree.has_children():
         #     tuples += tree.get_format_tuples(indent)
-        tuples += tree.get_format_tuples(indent)
+
+        tuples += tree.get_format_tuples(callback=_format_tree, indent=indent)
 
     print(tabulate(tuples, tablefmt="plain", headers=("account", "amount", "% of parent"),
                    colalign=("left", "right", "right")))
