@@ -37,7 +37,8 @@ def cmd_progress(db, budget_yaml: Path, include_nonresolved: bool):
         budget = load_budget_yaml(budget_yaml.read_text('utf-8'))
         format_tuples = get_format_tuples(db, budget.get('items', {}), budget['date_from'], budget['date_to'],
                       include_nonresolved)
-        print(tabulate(format_tuples, tablefmt="simple", headers=('account_name', 'consumed', 'budgeted', 'progress'),
+        print(tabulate(format_tuples, tablefmt="simple",
+                       headers=('account_name', 'budgeted', '% of parent', 'consumed', 'progress'),
                        colalign=("left", "right", "right", "right")))
         return 0
     except yaml.YAMLError:
@@ -51,9 +52,11 @@ def get_format_tuples(db, budget_items: Dict[str, float], date_from: date, date_
         all_posts_in_period = get_posts_between_period(db, date_from, date_to, include_nonresolved)
         txn_sum = orm.select(p.amount for p in all_posts_in_period if p.account.name.startswith(account_name)).sum()
         if tree.amount:
-            return (format_monetary(txn_sum), format_monetary(tree.amount),
+            return (format_monetary(tree.amount),
+                    f"{tree.amount / tree._parent.amount * 100.00:.2f}%" if tree._parent else "",
+                    format_monetary(txn_sum),
                     f"{float(txn_sum) / tree.amount * 100.00:.2f}%")
-        return ("", "", "")
+        return ("", "", "", "")
 
     tuples = []
     for acctype in ACCOUNT_TYPES:
