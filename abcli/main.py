@@ -43,5 +43,3 @@ def cli(ctx: click.Context, log_level, config_path: Path):
 
 
 init_command_groups(cli)
-
-# TODO: turn this cli into repl using https://github.com/click-contrib/click-repl

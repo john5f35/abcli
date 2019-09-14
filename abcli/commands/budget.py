@@ -31,8 +31,6 @@ def cli():
 @orm.db_session
 @error_exit_on_exception
 def cmd_progress(db, budget_yaml: Path, include_nonresolved: bool):
-    # TODO: show in tree format, with aggregation
-    # TODO: also show non-categorised accounts
     try:
         budget = load_budget_yaml(budget_yaml.read_text('utf-8'))
         format_tuples = get_format_tuples(db, budget.get('items', {}), budget['date_from'], budget['date_to'],

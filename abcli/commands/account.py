@@ -51,5 +51,3 @@ def cmd_show(db, name: str):
         return 0
     except orm.ObjectNotFound:
         raise click.BadArgumentUsage(f"Account '{name}' does not exist.")
-
-# TODO: command 'list' (with prefix?)
