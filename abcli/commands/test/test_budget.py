@@ -37,5 +37,5 @@ def test_budget_progress(tmp_path):
 
     assert get_format_tuples(db, {'Income': -100, 'Expenses': 200},
                              Date(2019, 1, 3), Date(2019, 1, 8), False) == \
-           [('Income', "-$30.00", "-$100.00", "30.00%"), ('Expenses', "$30.00", "$200.00", "15.00%"),
-            ('Assets', "", "", ""), ("Liabilities", "", "", "")]
+           [('Income', "-$100.00", "", "-$30.00", "30.00%"), ('Expenses', "$200.00", "", "$30.00", "15.00%"),
+            ('Assets', "", "", "", ""), ("Liabilities", "", "", "", "")]
