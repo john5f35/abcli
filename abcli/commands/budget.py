@@ -1,16 +1,18 @@
 import logging
 import json, yaml
 from pathlib import Path
+from typing import *
+from datetime import date
 
 import click
 from pony import orm
-import textwrap
 from tabulate import tabulate
 
 from abcli.utils import (
-    parse_date, format_date, format_monetary,
-    error_exit_on_exception
+    parse_date, format_monetary,
+    error_exit_on_exception, AccountTree
 )
+from abcli.model import ACCOUNT_TYPES
 from abcli.commands.transaction import get_posts_between_period
 from abcli.utils.click import PathType
 
@@ -29,15 +31,38 @@ def cli():
 @orm.db_session
 @error_exit_on_exception
 def cmd_progress(db, budget_yaml: Path, include_nonresolved: bool):
+    # TODO: show in tree format, with aggregation
+    # TODO: also show non-categorised accounts
     try:
         budget = load_budget_yaml(budget_yaml.read_text('utf-8'))
-        progress = evaluate_progress(db, budget, include_nonresolved)
-        logger.info((tabulate(
-            [(n, format_monetary(s), format_monetary(a), f"{p * 100:.2f}%") for n, s, a, p in progress],
-            headers=('account_name', 'consumed', 'budgeted', 'progress'))))
+        format_tuples = get_format_tuples(db, budget.get('items', {}), budget['date_from'], budget['date_to'],
+                      include_nonresolved)
+        print(tabulate(format_tuples, tablefmt="plain", headers=('account_name', 'consumed', 'budgeted', 'progress'),
+                       colalign=("left", "right", "right", "right")))
         return 0
     except yaml.YAMLError:
         raise KeyError(f"Failed to load budget YAML {budget_yaml}")
+
+
+def get_format_tuples(db, budget_items: Dict[str, float], date_from: date, date_to: date, include_nonresolved: bool):
+    @orm.db_session
+    def _format_tree(tree):
+        account_name = tree.fullname
+        all_posts_in_period = get_posts_between_period(db, date_from, date_to, include_nonresolved)
+        txn_sum = orm.select(p.amount for p in all_posts_in_period if p.account.name.startswith(account_name)).sum()
+        if tree.amount:
+            return (format_monetary(txn_sum), format_monetary(tree.amount),
+                    f"{float(txn_sum) / tree.amount * 100.00:.2f}%")
+        return ("", "", "")
+
+    tuples = []
+    for acctype in ACCOUNT_TYPES:
+        tree = AccountTree(acctype)
+        for acc_name in filter(lambda name: name.startswith(acctype), budget_items):
+            tree.add(acc_name, budget_items[acc_name])
+
+        tuples += tree.get_format_tuples(callback=_format_tree)
+    return tuples
 
 
 def load_budget_yaml(yaml_text: str):
@@ -51,14 +76,3 @@ def load_budget_yaml(yaml_text: str):
         return budget
     except Exception:
         raise yaml.YAMLError()
-
-
-@orm.db_session
-def evaluate_progress(db, budget, include_nonresolved: bool):
-    progress = []
-    budget_items = budget.get('items', {})
-    for account_name, amount in budget_items.items():
-        all_posts_in_period = get_posts_between_period(db, budget['date_from'], budget['date_to'], include_nonresolved)
-        txn_sum = orm.select(p.amount for p in all_posts_in_period if p.account.name.startswith(account_name)).sum()
-        progress.append((account_name, float(txn_sum), amount, (float(txn_sum) / amount)))
-    return progress
