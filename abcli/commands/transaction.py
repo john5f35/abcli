@@ -88,7 +88,7 @@ def txn_show(txn, verbose=True):
         logger.info(f"  posts:")
         table = [[post.account.name, format_monetary(post.amount), post.date_occurred, post.date_resolved] for post in txn.posts]
         logger.info(textwrap.indent(tabulate(table, headers=('account', 'amount', 'date occurred', 'date resolved'),
-                                             tablefmt="plain"), '    '))
+                                             tablefmt="simple"), '    '))
 
 
 @cli.command('import')
@@ -201,7 +201,7 @@ def _show_summary_tree(sum_dict: Dict[str, float], indent=""):
 
         tuples += tree.get_format_tuples(callback=_format_tree, indent=indent)
 
-    print(tabulate(tuples, tablefmt="plain", headers=("account", "amount", "% of parent"),
+    print(tabulate(tuples, tablefmt="simple", headers=("account", "amount", "% of parent"),
                    colalign=("left", "right", "right")))
 
 

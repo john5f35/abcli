@@ -37,7 +37,7 @@ def cmd_progress(db, budget_yaml: Path, include_nonresolved: bool):
         budget = load_budget_yaml(budget_yaml.read_text('utf-8'))
         format_tuples = get_format_tuples(db, budget.get('items', {}), budget['date_from'], budget['date_to'],
                       include_nonresolved)
-        print(tabulate(format_tuples, tablefmt="plain", headers=('account_name', 'consumed', 'budgeted', 'progress'),
+        print(tabulate(format_tuples, tablefmt="simple", headers=('account_name', 'consumed', 'budgeted', 'progress'),
                        colalign=("left", "right", "right", "right")))
         return 0
     except yaml.YAMLError:
