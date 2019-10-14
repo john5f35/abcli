@@ -6,7 +6,7 @@ logger = logging.getLogger()
 
 
 def init_command_groups(root):
-    src_files = list(filter(lambda name: not name.startswith("__"), \
+    src_files = list(filter(lambda name: not name.startswith("__") and not name == 'test', \
                             os.listdir(os.path.dirname(__file__))))
     for pysrc in src_files:
         try:
