@@ -78,7 +78,7 @@ Commands:
 Use `ablic csv prep` to reformat the CSV for classification.
 
 ```
-python abcli csv prep --help                                                                                                                                                                                                     [INSERT]
+$ python abcli csv prep --help
 Usage: abcli csv prep [OPTIONS] CSVPATH
 
 Options:
@@ -102,7 +102,7 @@ The prepared CSV will have the column format:
 ##### Classify
 Use `abcli csv classify` to classify prepared transaction CSVs according to a [rulebook](#rulebook):
 ```
-python abcli csv classify --help                                                                                                                                                                                                 [INSERT]
+$ python abcli csv classify --help
 Usage: abcli csv classify [OPTIONS] CSVPATH
 
 Options:
