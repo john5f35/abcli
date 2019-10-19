@@ -168,28 +168,33 @@ Expenses              $3681.26
 
 #### Budget -- show progress of budget
 
-You can write up a budget in YAML format:
-```yaml
+You can write up a budget in YAML format, and run `abcli budget progress` to get the progress report on the budget:
+```
+$ cat testbudget.yaml
 date_from: 01/04/2018
 date_to:   30/04/2018
 items:
   'Expenses:Food&Drink': 4000
   'Expenses:Bills&Utilities': 130
   'Expenses:Transport': 60
-```
-Then run `abcli budget progress` to get the progress report on the budget:
-```
+  'Expenses:Bills&Utilities:Phone': 120
+  'Expenses:Bills&Utilities:Internet': 20
+
 $ python abcli budget progress testbudget.yaml
 account_name           budgeted    % of parent    consumed  progress
 -------------------  ----------  -------------  ----------  ----------
 Income
-Expenses               $4190.00                   $3681.26  87.86%
-├── Food&Drink         $4000.00         95.47%     $700.39  17.51%
-├── Bills&Utilities     $130.00          3.10%     $128.91  99.16%
-└── Transport            $60.00          1.43%      $78.85  131.42%
+Expenses               $4330.00                   $3681.26  85.02%
+├── Food&Drink         $4000.00         92.38%     $700.39  17.51%
+├── Bills&Utilities     $270.00          6.24%     $128.91  47.74%
+│   ├── Phone           $120.00         44.44%     $120.51  100.43%
+│   └── Internet         $20.00          7.41%      $20.00  100.00%
+└── Transport            $60.00          1.39%      $78.85  131.42%
 Assets
 Liabilities
 ```
+
+As the accounts are presented in trees, sub-categories are summed at parent level.
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
