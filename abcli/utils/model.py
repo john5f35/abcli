@@ -27,10 +27,15 @@ def format_monetary(amount: float):
 class AccountTree:
     def __init__(self, segname: str, parent: 'AccountTree' = None):
         self.segname = segname
-        self.fullname = f'{parent.segname}:{segname}' if parent else segname
         self.amount = 0
         self._parent = parent
         self._children: OrderedDict[str, AccountTree] = OrderedDict()
+
+    @property
+    def fullname(self):
+        if self._parent:
+            return f'{self._parent.fullname}:{self.segname}'
+        return self.segname
 
     def has_children(self):
         return len(self._children) != 0
