@@ -117,21 +117,84 @@ This can help dealing with aggregated transactions, allowing them to be tracked 
 
 E.g.:
 ```csv
+date_occurred,date_resolved,amount,description,balance,this,that_auto,that_overwrite,ref
+23/06/2019,26/06/2019,-52.50,Group Dine Out,...,Assets:Bank:Commonwealth:Checking,,"{'Expenses:Food&Drink:Restaurant': 15.00, 'Expenses:Misc:Lent': 37.50}",@dinout23jun
 ```
+
+The group dine out transaction of `$52.50` is split into personal spending of `$15.00` in `Expenses:Food&Drink:Restaurant` category account, and "lent" spending of `$37.50`.
+The reference tag `@dinout23jun` is attached to this and other pay-back transactions to resolve the `$37.50` lent money.
 
 #### Rulebook
 A yaml file that allow keyword or regex matching on transaction description.
-The rule value is the `that` account.
 
-`this` account overwrite is supported through dictionary.
+Keywords are searched in top-down, first-match fashion.
+The matched value will be written to the transaction's `that_auto` field.
 
-E.g.
+A rule can also override `this` field in the CSV as well:
 ```yaml
 keyword:
     Dinner: "Expenses:Food&Drink:Restaurants"
     food reimb:
         this: "Income:Reimbursements"
-        that: "Expenses:Misc:Lent"
+        that_auto: "Expenses:Misc:Lent"
 regex:
     .*(Comm|Net)Bank.*: "Assets:Bank:Savings"
 ```
+
+#### Transaction -- import and summarise transactions
+
+Once `abcli csv classify` says it's 100% classified, you can run `abcli transaction import` to import the classified csv file into your database.
+Then you can query it using the `summary` and `show` command:
+
+```
+$ python abcli transaction summary -m 04/2018 -d 2
+account                 amount    % of parent
+-------------------  ---------  -------------
+Income               -$5432.00
+├── Work1            -$3521.00         64.82%
+└── Work2            -$1911.00         35.18%
+Expenses              $3681.26
+├── Food&Drink         $700.39         19.03%
+├── Charity             $92.00          2.50%
+├── Transport           $78.85          2.14%
+├── Personal           $151.86          4.13%
+├── Bills&Utilities    $128.91          3.50%
+├── Misc                $83.39          2.27%
+├── Housing            $640.00         17.39%
+├── Government        $1595.00         43.33%
+├── Healthcare          $72.00          1.96%
+└── Hobbies            $138.86          3.77%
+```
+
+#### Budget -- show progress of budget
+
+You can write up a budget in YAML format:
+```yaml
+date_from: 01/04/2018
+date_to:   30/04/2018
+items:
+  'Expenses:Food&Drink': 4000
+  'Expenses:Bills&Utilities': 130
+  'Expenses:Transport': 60
+```
+Then run `abcli budget progress` to get the progress report on the budget:
+```
+$ python abcli budget progress testbudget.yaml
+account_name           budgeted    % of parent    consumed  progress
+-------------------  ----------  -------------  ----------  ----------
+Income
+Expenses               $4190.00                   $3681.26  87.86%
+├── Food&Drink         $4000.00         95.47%     $700.39  17.51%
+├── Bills&Utilities     $130.00          3.10%     $128.91  99.16%
+└── Transport            $60.00          1.43%      $78.85  131.42%
+Assets
+Liabilities
+```
+
+## Contributing
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+Please make sure to update tests as appropriate.
+
+## License
+[MIT](https://choosealicense.com/licenses/mit/)
