@@ -2,11 +2,11 @@ image: python:3.7.3
 
 before_script:
   - apt-get update -qq && apt-get install -y -qq sqlite3 libsqlite3-dev
-  - pip install --user pipenv
-  - export PATH=/root/.local/bin:$PATH
-  - pipenv install
+  - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
+  - export PATH=$HOME/.poetry/bin:$PATH
+  - poetry install
 
 run-pytest:
   stage: test
   script:
-    - pipenv run pytest -v
+    - poetry run pytest -v
