@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "abcli"
-version = "0.8.0"
+version = "0.8.1"
 description = "A CLI tool for transaction tracking and budgeting"
 authors = ["John Zhang <john.u5f35@gmail.com>"]
 license = "MIT License"
