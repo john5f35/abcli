@@ -33,9 +33,9 @@ def cmd_set(db, account: str, balance: float, date: Date):
             obj.date_eod = date
         else:
             obj = db.Balance(account=account, amount=balance, date_eod=date)
-        logger.info(f"Balance:")
+        click.echo(f"Balance:")
         table = [[str(obj.date_eod), obj.account.name, format_monetary(obj.amount)]]
-        logger.info(textwrap.indent(tabulate(table, tablefmt="plain"), "  "))
+        click.echo(textwrap.indent(tabulate(table, tablefmt="plain"), "  "))
         return 0
     except ValueError:
         raise ValueError(f"Failed to parse date '{date}'.")
@@ -58,6 +58,6 @@ def cmd_show(db, account: str):
     if balance is None:
         raise KeyError(f"No balance defined on account '{account.name}'.")
 
-    logger.info(f"{account.name}:")
-    logger.info(f"  balance: ${balance.amount}")
-    logger.info(f"  date: {balance.date}")
+    click.echo(f"{account.name}:")
+    click.echo(f"  balance: ${balance.amount}")
+    click.echo(f"  date: {balance.date}")

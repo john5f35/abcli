@@ -68,26 +68,26 @@ def cmd_show(db, month: DateTime, date_from: Date, date_to: Date,
         if txn.uid not in txn_uids_shown:
             txn_show(txn, verbose)
             txn_uids_shown.add(txn.uid)
-            logger.info("")
+            click.echo("")
 
 
 @orm.db_session
 def txn_show(txn, verbose=True):
     ref = f"({txn.ref})" if txn.ref else ""
-    logger.info(f"Transaction '{txn.uid}' {ref}:")
-    logger.info(f"  description: {txn.description}")
-    logger.info(f"  min date occurred: {txn.min_date_occurred}")
-    logger.info(f"  max date resolved: {txn.max_date_resolved}")
-    logger.info(f"  summary:")
+    click.echo(f"Transaction '{txn.uid}' {ref}:")
+    click.echo(f"  description: {txn.description}")
+    click.echo(f"  min date occurred: {txn.min_date_occurred}")
+    click.echo(f"  max date resolved: {txn.max_date_resolved}")
+    click.echo(f"  summary:")
     sum_dic = defaultdict(float)
     for post in txn.posts:
         sum_dic[post.account.name] += float(post.amount)
-    logger.info(textwrap.indent(tabulate([[name, format_monetary(amount)] for name, amount in sum_dic.items() if amount != 0.0],
+    click.echo(textwrap.indent(tabulate([[name, format_monetary(amount)] for name, amount in sum_dic.items() if amount != 0.0],
                                          tablefmt="plain"), '    '))
     if verbose:
-        logger.info(f"  posts:")
+        click.echo(f"  posts:")
         table = [[post.account.name, format_monetary(post.amount), post.date_occurred, post.date_resolved] for post in txn.posts]
-        logger.info(textwrap.indent(tabulate(table, headers=('account', 'amount', 'date occurred', 'date resolved'),
+        click.echo(textwrap.indent(tabulate(table, headers=('account', 'amount', 'date occurred', 'date resolved'),
                                              tablefmt="simple"), '    '))
 
 
@@ -126,7 +126,7 @@ def cmd_import(db, csvpath: Path, create_missing: bool):
                            date_resolved=parse_date(post['date_resolved']))
                    for post in txn['posts']]
         )
-    logger.info(f"Imported {len(txn_json['transactions'])} transactions")
+    click.echo(f"Imported {len(txn_json['transactions'])} transactions")
 
     return 0
 

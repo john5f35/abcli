@@ -19,7 +19,7 @@ def cmd_add(db, name: str):
         try:
             db.Account(name=name)
             orm.commit()
-            logger.info(f"Account '{name}' added.")
+            click.echo(f"Account '{name}' added.")
             return 0
         except orm.TransactionIntegrityError:
             raise click.BadArgumentUsage(f"Account '{name}' already exists.")
@@ -33,7 +33,7 @@ def cmd_add(db, name: str):
 def cmd_delete(db, name: str):
     try:
         db.Account[name].delete()
-        logger.info(f"Account '{name}' deleted.")
+        click.echo(f"Account '{name}' deleted.")
         return 0
     except orm.ObjectNotFound:
         raise click.BadArgumentUsage(f"Account '{name}' does not exist.")
@@ -47,7 +47,7 @@ def cmd_delete(db, name: str):
 def cmd_show(db, name: str):
     try:
         account = db.Account[name]
-        logger.info(f"Account '{name}'")
+        click.echo(f"Account '{name}'")
         return 0
     except orm.ObjectNotFound:
         raise click.BadArgumentUsage(f"Account '{name}' does not exist.")

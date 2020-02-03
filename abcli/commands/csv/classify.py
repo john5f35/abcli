@@ -53,7 +53,7 @@ def cmd_classify(csvpath: Path, rulebook_path: Path):
     restxns = classify(rows, rulebook)
     num_classified = len(list(filter(lambda txn: txn['that_auto'] or txn['that_overwrite'], restxns)))
 
-    logger.info(f"{num_classified}/{len(restxns)} classified ({int(num_classified / len(restxns) * 100)}%)")
+    click.echo(f"{num_classified}/{len(restxns)} classified ({int(num_classified / len(restxns) * 100)}%)")
 
     with csvpath.open('w', encoding='utf-8') as fp:
         writer = csv.DictWriter(fp, fieldnames)
