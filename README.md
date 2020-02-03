@@ -9,7 +9,7 @@ and [double entry accounting method](https://docs.google.com/document/d/100tGcA4
 ## Requirements
 
 - Python 3.6+;
-- `pipenv`;
+- `poetry`;
 - database back-end (e.g. Postgres)
 
 ## Install
@@ -17,7 +17,7 @@ and [double entry accounting method](https://docs.google.com/document/d/100tGcA4
 ```
 $ git clone git@github.com:john5f35/account-book-cli.git
 $ cd account-book-cli
-$ pipenv install
+$ poetry install
 ```
 
 ## Usage
@@ -54,8 +54,8 @@ for supported database and relevant arguments in config file.
 SQLite DB file can be created anew; other DBs will need the DB setup and running for abcli to connect to it.
 
 ```
-$ pipenv run python abcli
-Loading .env environment variables…
+$ poetry shell
+$ abcli
 Usage: abcli [OPTIONS] COMMAND [ARGS]...
 
 Options:
@@ -78,7 +78,7 @@ Commands:
 Use `ablic csv prep` to reformat the CSV for classification.
 
 ```
-$ python abcli csv prep --help
+$ abcli csv prep --help
 Usage: abcli csv prep [OPTIONS] CSVPATH
 
 Options:
@@ -102,7 +102,7 @@ The prepared CSV will have the column format:
 ##### Classify
 Use `abcli csv classify` to classify prepared transaction CSVs according to a [rulebook](#rulebook):
 ```
-$ python abcli csv classify --help
+$ abcli csv classify --help
 Usage: abcli csv classify [OPTIONS] CSVPATH
 
 Options:
@@ -147,7 +147,7 @@ Once `abcli csv classify` says it's 100% classified, you can run `abcli transact
 Then you can query it using the `summary` and `show` command:
 
 ```
-$ python abcli transaction summary -m 04/2018 -d 2
+$ abcli transaction summary -m 04/2018 -d 2
 account                 amount    % of parent
 -------------------  ---------  -------------
 Income               -$5432.00
@@ -180,7 +180,7 @@ items:
   'Expenses:Bills&Utilities:Phone': 120
   'Expenses:Bills&Utilities:Internet': 20
 
-$ python abcli budget progress testbudget.yaml
+$ abcli budget progress testbudget.yaml
 account_name           budgeted    % of parent    consumed  progress
 -------------------  ----------  -------------  ----------  ----------
 Income
