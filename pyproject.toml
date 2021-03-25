@@ -8,7 +8,7 @@ license = "MIT License"
 [tool.poetry.dependencies]
 python = "^3.7"
 tqdm = "^4.42.0"
-pyyaml = "^5.3"
+pyyaml = "^5.4"
 coloredlogs = "^10.0"
 pony = "^0.7.11"
 treelib = "^1.5.5"
